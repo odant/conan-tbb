@@ -25,6 +25,7 @@ class TBBConan(ConanFile):
     def build_requirements(self):
         if self.settings.os == "Windows" and self.settings.compiler == "Visual Studio":
             self.build_requires("get_vcvars/1.0@odant/stable")
+            self.build_requires("find_sdk_winxp/1.0@odant/stable")
             self.build_requires("gnu_make_installer/4.2.1@odant/stable")
 
     def configure(self):
