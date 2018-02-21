@@ -59,7 +59,11 @@ class TBBConan(ConanFile):
         return env
 
     def package(self):
-        pass
+        self.copy("*.h", src="src/include", dst="include", keep_path=True)
+        self.copy("*.lib", dst="lib", keep_path=False)
+        self.copy("*.dll", dst="bin", keep_path=False)
+        self.copy("*.so*", dst="lib", keep_path=False, symlinks=True)
+        self.copy("*.a", dst="lib", keep_path=False)
 
     def package_info(self):
         self.cpp_info.libs = tools.collect_libs(self)
