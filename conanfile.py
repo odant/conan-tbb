@@ -1,4 +1,6 @@
 from conans import ConanFile, tools
+from conans.errors import ConanException
+import os
 
 
 class TBBConan(ConanFile):
@@ -13,18 +15,48 @@ class TBBConan(ConanFile):
         "build_type": ["Debug", "Release"],
         "arch": ["x86_64", "x86"]
     }
-    exports_sources = "src/*"
+    exports_sources = "src/*", "Makefile.patch"
     no_copy_source = True
     build_policy = "missing"
+    
+    def source(self):
+        tools.patch(patch_file="Makefile.patch")
+
+    def build_requirements(self):
+        if self.settings.os == "Windows" and self.settings.compiler == "Visual Studio":
+            self.build_requires("get_vcvars/1.0@odant/stable")
+            self.build_requires("gnu_make_installer/4.2.1@odant/stable")
 
     def configure(self):
         # Only C++11
-        if "libcxx" in self.settings.compiler.fields:
-            if self.settings.compiler.libcxx == "libstdc++":
-                raise Exception("This package is only compatible with libstdc++11")
+        if self.settings.compiler.get_safe("libcxx") == "libstdc++":
+            raise ConanException("This package is only compatible with libstdc++11")
 
     def build(self):
-        pass
+        build_type = str(self.settings.build_type).lower()
+        arch = {
+            "x86": "ia32",
+            "x86_64": "intel64"
+        }.get(str(self.settings.arch))
+        if not arch:
+            raise ConanException("Unsupported architecture %s" % self.settings.arch)
+        #   
+        build_env = self.get_build_environment()
+        source_folder = os.path.join(self.source_folder, "src")
+        with tools.chdir(source_folder), tools.environment_append(build_env):
+            self.run("make tbb build_type=%s arch=%s tbb_build_dir=%s" % (build_type, arch, self.build_folder))
+
+    def get_build_environment(self):
+        env = {}
+        if self.settings.os == "Windows" and self.settings.compiler == "Visual Studio":
+            with tools.pythonpath(self):
+                import get_vcvars
+                env = get_vcvars.get_vcvars(self.settings)
+                toolset = str(self.settings.compiler.get_safe("toolset"))
+                if toolset.endswith("_xp"):
+                    import find_sdk_winxp
+                    env = find_sdk_winxp.dict_append(self.settings.arch, env=env)
+        return env
 
     def package(self):
         pass

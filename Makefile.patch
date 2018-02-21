@@ -1,0 +1,67 @@
+--- a/src/Makefile
++++ b/src/Makefile
+@@ -16,6 +16,7 @@
+ #
+ #
+ 
++build_type?=release
+ tbb_root?=.
+ include $(tbb_root)/build/common.inc
+ .PHONY: default all tbb tbbmalloc tbbproxy test examples
+@@ -29,32 +30,26 @@
+ all: tbb tbbmalloc tbbproxy test examples
+ 
+ tbb: mkdir
+-	$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.tbb cfg=debug
+-	$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.tbb cfg=release
++	$(MAKE) -C "$(work_dir)_$(build_type)"  -r -f $(tbb_root)/build/Makefile.tbb cfg=$(build_type)
+ 
+ tbbmalloc: mkdir
+-	$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=debug malloc
+-	$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=release malloc
++	$(MAKE) -C "$(work_dir)_$(build_type)"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=$(build_type) malloc
+ 
+ tbbproxy: mkdir
+-	$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.tbbproxy cfg=debug tbbproxy
+-	$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.tbbproxy cfg=release tbbproxy
++	$(MAKE) -C "$(work_dir)_$(build_type)"  -r -f $(tbb_root)/build/Makefile.tbbproxy cfg=$(build_type) tbbproxy
+ 
+ test: tbb tbbmalloc $(if $(use_proxy),tbbproxy)
+-	-$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=debug malloc_test
+-	-$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.test cfg=debug
+-	-$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=release malloc_test
+-	-$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.test cfg=release
++	-$(MAKE) -C "$(work_dir)_$(build_type)"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=$(build_type) malloc_test
++	-$(MAKE) -C "$(work_dir)_$(build_type)"  -r -f $(tbb_root)/build/Makefile.test cfg=$(build_type)
+ 
+ rml: mkdir
+-	$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.rml cfg=debug
+-	$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.rml cfg=release
++	$(MAKE) -C "$(work_dir)_$(build_type)"  -r -f $(tbb_root)/build/Makefile.rml cfg=$(build_type)
+ 
+ examples: tbb tbbmalloc
+-	$(MAKE) -C examples -r -f Makefile tbb_root=.. release test
++	$(MAKE) -C examples -r -f Makefile tbb_root=.. $(build_type) test
+ 
+ python: tbb
+-	$(MAKE) -C "$(work_dir)_release" -rf $(tbb_root)/python/Makefile install
++	$(MAKE) -C "$(work_dir)_$(build_type)" -rf $(tbb_root)/python/Makefile install
+ 
+ .PHONY: clean clean_examples mkdir info
+ 
+@@ -69,12 +64,12 @@
+ 	$(shell $(MAKE) -s -i -r -C examples -f Makefile tbb_root=.. clean >$(NUL) 2>$(NUL))
+ 
+ mkdir:
+-	$(shell $(MD) "$(work_dir)_release" >$(NUL) 2>$(NUL))
+-	$(shell $(MD) "$(work_dir)_debug" >$(NUL) 2>$(NUL))
+-	@echo Created $(work_dir)_release and ..._debug directories
++	$(shell $(MD) "$(work_dir)_$(build_type)" >$(NUL) 2>$(NUL))
++	@echo Created $(work_dir)_$(build_type) directory
+ 
+ info:
+ 	@echo OS: $(tbb_os)
++	@echo build_type=$(build_type)
+ 	@echo arch=$(arch)
+ 	@echo compiler=$(compiler)
+ 	@echo runtime=$(runtime)
