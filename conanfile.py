@@ -44,7 +44,7 @@ class TBBConan(ConanFile):
         build_env = self.get_build_environment()
         source_folder = os.path.join(self.source_folder, "src")
         with tools.chdir(source_folder), tools.environment_append(build_env):
-            self.run("make tbb build_type=%s arch=%s tbb_build_dir=%s" % (build_type, arch, self.build_folder))
+            self.run("make tbb build_type=%s arch=%s tbb_build_dir=%s -j%s" % (build_type, arch, self.build_folder, tools.cpu_count()))
 
     def get_build_environment(self):
         env = {}
