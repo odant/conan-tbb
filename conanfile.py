@@ -68,3 +68,6 @@ class TBBConan(ConanFile):
 
     def package_info(self):
         self.cpp_info.libs = tools.collect_libs(self)
+        if self.settings.os == "Windows":
+            # Disable auto link
+            self.cpp_info.defines.append("__TBB_NO_IMPLICIT_LINKAGE=1")
