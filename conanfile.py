@@ -1,5 +1,4 @@
 from conans import ConanFile, tools
-from conans.errors import ConanException
 import os
 
 
@@ -45,6 +44,7 @@ class TBBConan(ConanFile):
         build_env = self.get_build_environment()
         source_folder = os.path.join(self.source_folder, "src")
         with tools.chdir(source_folder), tools.environment_append(build_env):
+            self.output.info("Current directory: %s" % os.getcwd())
             self.run("make tbb build_type=%s arch=%s tbb_build_dir=%s -j%s" % (build_type, arch, self.build_folder, tools.cpu_count()))
 
     def get_build_environment(self):
@@ -63,11 +63,23 @@ class TBBConan(ConanFile):
         self.copy("*.h", src="src/include", dst="include", keep_path=True)
         self.copy("*.lib", dst="lib", keep_path=False)
         self.copy("*.dll", dst="bin", keep_path=False)
-        self.copy("*.so*", dst="lib", keep_path=False, symlinks=True)
+        self.copy("*.so.*", dst="lib", keep_path=False, symlinks=True)
         self.copy("*.a", dst="lib", keep_path=False)
+        # Symlink
+        if self.settings.os == "Linux":
+            lib_folder = os.path.join(self.package_folder, "lib")
+            if not os.path.isdir(lib_folder):
+                return
+            with tools.chdir(lib_folder):
+                for fname in os.listdir("."):
+                    extension = ".so"
+                    symlink = fname[0:fname.rfind(extension) + len(extension)]
+                    self.run("ln -s \"%s\" \"%s\"" % (fname, symlink))
 
     def package_info(self):
-        self.cpp_info.libs = tools.collect_libs(self)
+        self.cpp_info.libs = ["tbb"]
+        if self.settings.build_type == "Debug":
+            self.cpp_info.libs = ["tbb_debug"]
+        # Disable auto link
         if self.settings.os == "Windows":
-            # Disable auto link
             self.cpp_info.defines.append("__TBB_NO_IMPLICIT_LINKAGE=1")
