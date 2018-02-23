@@ -14,7 +14,7 @@ class TBBConan(ConanFile):
         "build_type": ["Debug", "Release"],
         "arch": ["x86_64", "x86"]
     }
-    exports_sources = "src/*", "Makefile.patch"
+    exports_sources = "src/*", "Makefile.patch", "FindTBB.cmake"
     no_copy_source = True
     build_policy = "missing"
     
@@ -60,6 +60,7 @@ class TBBConan(ConanFile):
         return env
 
     def package(self):
+        self.copy("FindTBB.cmake", src=".", dst=".")
         self.copy("*.h", src="src/include", dst="include", keep_path=True)
         self.copy("*.lib", dst="lib", keep_path=False)
         self.copy("*.dll", dst="bin", keep_path=False)
@@ -83,3 +84,4 @@ class TBBConan(ConanFile):
         # Disable auto link
         if self.settings.os == "Windows":
             self.cpp_info.defines.append("__TBB_NO_IMPLICIT_LINKAGE=1")
+
