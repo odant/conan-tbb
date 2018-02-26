@@ -31,8 +31,14 @@ class TBBConan(ConanFile):
     build_policy = "missing"
     
     def configure(self):
+        # Only C++11
+        if self.settings.compiler.get_safe("libcxx") == "libstdc++":
+            raise ConanException("This package is only compatible with libstdc++11")
+        # DLL sign, only Windows
         if self.settings.os != "Windows":
             del self.options.dll_sign
+
+    def build_requirements(self):
         if self.settings.os == "Windows" and self.settings.compiler == "Visual Studio":
             self.build_requires("get_vcvars/1.0@%s/stable" % self.user)
             self.build_requires("find_sdk_winxp/1.0@%s/stable" % self.user)
@@ -42,11 +48,6 @@ class TBBConan(ConanFile):
 
     def source(self):
         tools.patch(patch_file="Makefile.patch")
-
-    def configure(self):
-        # Only C++11
-        if self.settings.compiler.get_safe("libcxx") == "libstdc++":
-            raise ConanException("This package is only compatible with libstdc++11")
 
     def build(self):
         build_type = str(self.settings.build_type).lower()
