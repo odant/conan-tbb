@@ -1,5 +1,13 @@
 from conans import ConanFile, tools
-import os
+from conans.errors import ConanException
+import os, glob
+
+
+def get_safe(options, name):
+    try:
+        return getattr(options, name, None)
+    except ConanException:
+        return None
 
 
 class TBBConan(ConanFile):
@@ -14,19 +22,29 @@ class TBBConan(ConanFile):
         "build_type": ["Debug", "Release"],
         "arch": ["x86_64", "x86"]
     }
+    options = {
+        "dll_sign": [False, True]
+    }
+    default_options = "dll_sign=True"
     exports_sources = "src/*", "Makefile.patch", "FindTBB.cmake"
     no_copy_source = True
     build_policy = "missing"
     
+    def configure(self):
+        if self.settings.os != "Windows":
+            del self.options.dll_sign
+
     def source(self):
         tools.patch(patch_file="Makefile.patch")
 
     def build_requirements(self):
         if self.settings.os == "Windows" and self.settings.compiler == "Visual Studio":
-            self.build_requires("get_vcvars/1.0@odant/stable")
-            self.build_requires("find_sdk_winxp/1.0@odant/stable")
-            self.build_requires("gnu_make_installer/4.2.1@odant/stable")
-
+            self.build_requires("get_vcvars/1.0@%s/stable" % self.user)
+            self.build_requires("find_sdk_winxp/1.0@%s/stable" % self.user)
+            self.build_requires("gnu_make_installer/4.2.1@%s/stable" % self.user)
+        if get_safe(self.options, "dll_sign"):
+            self.build_requires("find_windows_signtool/[~=1.0]@%s/stable" % self.user)
+            
     def configure(self):
         # Only C++11
         if self.settings.compiler.get_safe("libcxx") == "libstdc++":
@@ -76,6 +94,16 @@ class TBBConan(ConanFile):
                     extension = ".so"
                     symlink = fname[0:fname.rfind(extension) + len(extension)]
                     self.run("ln -s \"%s\" \"%s\"" % (fname, symlink))
+        # Sign DLL
+        if get_safe(self.options, "dll_sign"):
+            with tools.pythonpath(self):
+                from find_windows_signtool import find_signtool
+                signtool = '"' + find_signtool(str(self.settings.arch)) + '"'
+                params =  "sign /a /t http://timestamp.verisign.com/scripts/timestamp.dll"
+                pattern = os.path.join(self.package_folder, "bin", "*.dll")
+                for fpath in glob.glob(pattern):
+                    self.output.info("Sign %s" % fpath)
+                    self.run("%s %s %s" %(signtool, params, fpath))
 
     def package_info(self):
         self.cpp_info.libs = ["tbb"]

@@ -33,13 +33,13 @@ def vs_add_toolset(builds):
                 result.append([settings, options, env_vars, build_requires, reference])
     return result
 
-#def add_dll_sign(builds):
-#    result = []
-#    for settings, options, env_vars, build_requires, reference in builds:
-#        options = deepcopy(options)
-#        options["openssl:dll_sign"] = dll_sign
-#        result.append([settings, options, env_vars, build_requires, reference])
-#    return result
+def add_dll_sign(builds):
+    result = []
+    for settings, options, env_vars, build_requires, reference in builds:
+        options = deepcopy(options)
+        options["openssl:dll_sign"] = dll_sign
+        result.append([settings, options, env_vars, build_requires, reference])
+    return result
 
 def filter_libcxx(builds):
     result = []
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     builds = builder.items
     if platform.system() == "Windows":
         builds = vs_add_toolset(builds)
-        #builds = add_dll_sign(builds)
+        builds = add_dll_sign(builds)
     if platform.system() == "Linux":
         builds = filter_libcxx(builds)
     # Replace build configurations
