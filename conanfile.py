@@ -40,7 +40,6 @@ class TBBConan(ConanFile):
 
     def build_requirements(self):
         if self.settings.os == "Windows" and self.settings.compiler == "Visual Studio":
-            self.build_requires("get_vcvars/1.0@%s/stable" % self.user)
             self.build_requires("find_sdk_winxp/1.0@%s/stable" % self.user)
             self.build_requires("gnu_make_installer/4.2.1@%s/stable" % self.user)
         if get_safe(self.options, "dll_sign"):
@@ -67,13 +66,11 @@ class TBBConan(ConanFile):
     def get_build_environment(self):
         env = {}
         if self.settings.os == "Windows" and self.settings.compiler == "Visual Studio":
-            with tools.pythonpath(self):
-                import get_vcvars
-                env = get_vcvars.get_vcvars(self.settings)
-                toolset = str(self.settings.compiler.get_safe("toolset"))
-                if toolset.endswith("_xp"):
-                    import find_sdk_winxp
-                    env = find_sdk_winxp.dict_append(self.settings.arch, env=env)
+            env = tools.vcvars_dict(self.settings, filter_known_paths=False)
+            toolset = str(self.settings.compiler.get_safe("toolset"))
+            if toolset.endswith("_xp"):
+                import find_sdk_winxp
+                env = find_sdk_winxp.dict_append(self.settings.arch, env=env)
         return env
 
     def package(self):
