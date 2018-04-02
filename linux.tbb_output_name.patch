@@ -4,8 +4,8 @@
  TBB.LST = $(tbb_root)/src/tbb/$(def_prefix)-tbb-export.lst
  TBB.DEF = $(TBB.LST:.lst=.def)
  
-+tbb_output_name ?= libtbb$(CPF_SUFFIX)$(DEBUG_SUFFIX)
-+TBB_NO_VERSION.DLL = $(tbb_output_name).$(DLL)
++tbb_output_name ?= tbb$(CPF_SUFFIX)$(DEBUG_SUFFIX)
++TBB_NO_VERSION.DLL = lib$(tbb_output_name).$(DLL)
  TBB.DLL = $(TBB_NO_VERSION.DLL).$(SONAME_SUFFIX)
  TBB.LIB = $(TBB.DLL)
 -TBB_NO_VERSION.DLL=libtbb$(CPF_SUFFIX)$(DEBUG_SUFFIX).$(DLL)
