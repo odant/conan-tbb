@@ -26,7 +26,7 @@ class TBBConan(ConanFile):
         "dll_sign": [False, True]
     }
     default_options = "dll_sign=True"
-    exports_sources = "src/*", "Makefile.patch", "windows.tbb_output_name.patch", "FindTBB.cmake"
+    exports_sources = "src/*", "Makefile.patch", "windows.tbb_output_name.patch", "linux.tbb_output_name.patch", "FindTBB.cmake"
     no_copy_source = True
     build_policy = "missing"
     
@@ -48,6 +48,7 @@ class TBBConan(ConanFile):
     def source(self):
         tools.patch(patch_file="Makefile.patch")
         tools.patch(patch_file="windows.tbb_output_name.patch")
+        tools.patch(patch_file="linux.tbb_output_name.patch")
 
     def build(self):
         output_name = "tbb"
