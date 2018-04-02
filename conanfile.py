@@ -61,7 +61,7 @@ class TBBConan(ConanFile):
         source_folder = os.path.join(self.source_folder, "src")
         with tools.chdir(source_folder), tools.environment_append(build_env):
             self.output.info("Current directory: %s" % os.getcwd())
-            self.run("make tbb build_type=%s arch=%s tbb_build_dir=%s -j%s" % (build_type, arch, self.build_folder, tools.cpu_count()))
+            self.run("make tbb SDL_FLAGS=-DTBB_NO_LEGACY build_type=%s arch=%s tbb_build_dir=%s -j%s" % (build_type, arch, self.build_folder, tools.cpu_count()))
 
     def get_build_environment(self):
         env = {}
