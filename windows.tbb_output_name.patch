@@ -1,0 +1,14 @@
+--- a/src/build/_windows.inc
++++ b/src/build/windows.inc
+@@ -67,8 +67,9 @@
+ 
+ TBB.LST = $(tbb_root)/src/tbb/$(def_prefix)-tbb-export.lst
+ TBB.DEF = $(TBB.LST:.lst=.def)
+-TBB.DLL = tbb$(CPF_SUFFIX)$(DEBUG_SUFFIX).$(DLL)
+-TBB.LIB = tbb$(CPF_SUFFIX)$(DEBUG_SUFFIX).$(LIBEXT)
++tbb_output_name ?= tbb$(CPF_SUFFIX)$(DEBUG_SUFFIX)
++TBB.DLL = $(tbb_output_name).$(DLL)
++TBB.LIB = $(tbb_output_name).$(LIBEXT)
+ TBB.RES = tbb_resource.res
+ # On Windows, we use #pragma comment to set the proper TBB lib to link with.
+ # But for cross-configuration testing, need to link explicitly.

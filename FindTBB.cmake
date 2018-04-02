@@ -8,7 +8,7 @@ find_path(TBB_INCLUDE_DIR
 )
 
 find_library(TBB_LIBRARY
-    NAMES tbb tbb_debug
+    NAMES tbb tbb32 tbb32d tbb64 tbb64d
     PATHS ${CONAN_LIB_DIRS_TBB}
     NO_DEFAULT_PATH
 )
