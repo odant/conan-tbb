@@ -24,7 +24,7 @@ add_test(
 find_package(TBB REQUIRED)
 
 add_executable(test_fib test_fib.cpp)
-target_link_libraries(test_fib CONAN_PKG::tbb)
+target_link_libraries(test_fib TBB::tbb)
 set_target_properties(test_fib
     PROPERTIES
     INSTALL_RPATH "$ORIGIN"
