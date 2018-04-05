@@ -14,11 +14,13 @@ find_library(TBB_LIBRARY
 )
 
 if(TBB_INCLUDE_DIR)
+
     set(TBB_VERSION_MAJOR 2018)
     set(TBB_VERSION_MINOR 2)
     set(TBB_VERSION_STRING "${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR}")
     set(TBB_VERSION_COUNT 2)
     set(TBB_INTERFACE_VERSION 10002)
+
 endif()
 
 include(FindPackageHandleStandardArgs)
@@ -28,7 +30,9 @@ find_package_handle_standard_args(TBB
 )
 
 if(TBB_FOUND AND NOT TARGET TBB::tbb)
+    
     add_library(TBB::tbb UNKNOWN IMPORTED)
+    
     set_target_properties(TBB::tbb PROPERTIES
         IMPORTED_LOCATION "${TBB_LIBRARY}"
         INTERFACE_INCLUDE_DIRECTORIES "${TBB_INCLUDE_DIR}"
@@ -36,7 +40,10 @@ if(TBB_FOUND AND NOT TARGET TBB::tbb)
     )
 
     mark_as_advanced(TBB_INCLUDE_DIR TBB_LIBRARY)
+
     set(TBB_INCLUDE_DIRS ${TBB_INCLUDE_DIR})
     set(TBB_LIBRARIES ${TBB_LIBRARY})
+    set(TBB_DEFINITIONS ${CONAN_COMPILE_DEFINITIONS_TBB})
+
 endif()
 
