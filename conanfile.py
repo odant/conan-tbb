@@ -43,7 +43,7 @@ class TBBConan(ConanFile):
             self.build_requires("find_sdk_winxp/1.0@%s/stable" % self.user)
             self.build_requires("gnu_make_installer/4.2.1@%s/stable" % self.user)
         if get_safe(self.options, "dll_sign"):
-            self.build_requires("windows_signtool/1.0@%s/stable" % self.user)
+            self.build_requires("windows_signtool/[~=1.0]@%s/stable" % self.user)
 
     def source(self):
         tools.patch(patch_file="Makefile.patch")
