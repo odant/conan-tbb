@@ -59,6 +59,7 @@ class TBBConan(ConanFile):
                         }.get(str(self.settings.arch))
             if self.settings.build_type == "Debug":
                 output_name += "d"
+        #
         build_env = self.get_build_environment()
         source_folder = os.path.join(self.source_folder, "src")
         build_args = [
@@ -69,11 +70,12 @@ class TBBConan(ConanFile):
                         "x86": "ia32",
                         "x86_64": "intel64"
                     }.get(str(self.settings.arch)),
+            "tbb_root=%s" % source_folder,
             "tbb_build_dir=%s" % self.build_folder
         ]
-        with tools.chdir(source_folder), tools.environment_append(build_env):
+        with tools.environment_append(build_env):
             self.output.info("Current directory: %s" % os.getcwd())
-            self.run("make tbb %s -j%s" % (" ".join(build_args), tools.cpu_count()))
+            self.run("make -f %s tbb %s -j%s" % (os.path.join(source_folder, "Makefile"), " ".join(build_args), tools.cpu_count()))
 
     def get_build_environment(self):
         env = {}
