@@ -1,10 +1,17 @@
+# Test for Intel TBB Conan package
+# Dmitriy Vetutnev, Odant, 2018
+
+
 project(PackageTest CXX)
 cmake_minimum_required(VERSION 3.0)
+
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS)
 
+
 enable_testing()
+
 
 # CONAN_PKG imported targets
 add_executable(test_fib_CONAN_PKG test_fib.cpp)
@@ -19,6 +26,7 @@ add_test(
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
     COMMAND test_fib_CONAN_PKG
 )
+
 
 # CMake imported targets
 find_package(TBB REQUIRED)
@@ -35,4 +43,3 @@ add_test(
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
     COMMAND test_fib
 )
-

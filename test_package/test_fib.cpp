@@ -1,3 +1,7 @@
+// Test for Intel TBB Conan package
+// Dmitriy Vetutnev, Odant, 2018
+
+
 #include <tbb/task_group.h>
 #include <iostream>
 #include <cstdlib>
@@ -16,6 +20,7 @@ int Fib(int n) {
         return x+y;
     }
 }
+
 
 int main(int, char**) {
 

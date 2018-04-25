@@ -1,5 +1,6 @@
-# Dmitriy Vetutnev 2018
-# ODANT 2018
+# Intel TBB Conan package
+# Dmitriy Vetutnev, Odant, 2018
+
 
 find_path(TBB_INCLUDE_DIR
     NAMES tbb/tbb.h
