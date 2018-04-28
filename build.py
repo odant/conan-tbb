@@ -20,6 +20,7 @@ visual_toolsets = None
 if "CONAN_VISUAL_TOOLSETS" in os.environ:
     visual_toolsets = [s.strip() for s in os.environ["CONAN_VISUAL_TOOLSETS"].split(",")]
 dll_sign = False if "CONAN_DISABLE_DLL_SIGN" in os.environ else True
+built_in_tests = True if "TBB_BUILT_IN_TESTS" in os.environ else False
 
 
 def vs_get_toolsets(compiler_version):
@@ -57,6 +58,15 @@ def filter_libcxx(builds):
     return result
 
 
+def add_built_in_tests(builds):
+    result = []
+    for settings, options, env_vars, build_requires, reference in builds:
+        options = deepcopy(options)
+        options["tbb:built_int_tests"] = built_in_tests
+        result.append([settings, options, env_vars, build_requires, reference])
+    return result
+
+
 if __name__ == "__main__":
     builder = ConanMultiPackager(
         username=username,
@@ -70,6 +80,7 @@ if __name__ == "__main__":
     if platform.system() == "Windows":
         builds = vs_add_toolset(builds)
         builds = add_dll_sign(builds)
+        builds = add_built_in_tests(builds)
     if platform.system() == "Linux":
         builds = filter_libcxx(builds)
     # Replace build configurations

@@ -27,9 +27,10 @@ class TBBConan(ConanFile):
         "arch": ["x86_64", "x86"]
     }
     options = {
-        "dll_sign": [False, True]
+        "dll_sign": [False, True],
+        "built_in_tests": [False, True]
     }
-    default_options = "dll_sign=True"
+    default_options = "dll_sign=True", "built_in_tests=False"
     exports_sources = "src/*", "Makefile.patch", "windows.tbb_output_name.patch", "linux.tbb_output_name.patch", "FindTBB.cmake"
     no_copy_source = True
     build_policy = "missing"
@@ -39,7 +40,7 @@ class TBBConan(ConanFile):
         if self.settings.compiler.get_safe("libcxx") == "libstdc++":
             raise ConanException("This package is only compatible with libstdc++11")
         # DLL sign, only Windows
-        if self.settings.os != "Windows":
+        if self.settings.os != "Windows" or self.options.built_in_tests:
             del self.options.dll_sign
 
     def build_requirements(self):
@@ -64,10 +65,11 @@ class TBBConan(ConanFile):
             if self.settings.build_type == "Debug":
                 output_name += "d"
         #
-        build_env = self.get_build_environment()
         source_folder = os.path.join(self.source_folder, "src")
+        #
+        flags = ["-DTBB_NO_LEGACY=1"]
         build_args = [
-            "SDL_FLAGS=-DTBB_NO_LEGACY",
+            "CXXFLAGS=\"%s\"" % " ".join(flags),
             "tbb_output_name=%s" % output_name,
             "build_type=%s" % str(self.settings.build_type).lower(),
             "arch=%s" % {
@@ -77,9 +79,16 @@ class TBBConan(ConanFile):
             "tbb_root=%s" % source_folder,
             "tbb_build_dir=%s" % self.build_folder
         ]
+        target = "tbb"
+        #
+        if self.options.built_in_tests:
+            build_args.insert(0, "NO_LEGACY_TESTS=1")
+            target = "test"
+        #
+        build_env = self.get_build_environment()
         with tools.environment_append(build_env):
             self.output.info("Current directory: %s" % os.getcwd())
-            self.run("make -f %s tbb %s -j%s" % (os.path.join(source_folder, "Makefile"), " ".join(build_args), tools.cpu_count()))
+            self.run("make -f %s %s %s -j%s" % (os.path.join(source_folder, "Makefile"), " ".join(build_args), target, tools.cpu_count()))
 
     def get_build_environment(self):
         env = {}
@@ -92,6 +101,9 @@ class TBBConan(ConanFile):
         return env
 
     def package(self):
+        # Don`t pack if testing
+        if self.options.built_in_tests:
+            return
         self.copy("FindTBB.cmake", src=".", dst=".")
         self.copy("*.h", src="src/include", dst="include", keep_path=True)
         self.copy("*.lib", dst="lib", keep_path=False)
@@ -126,4 +138,3 @@ class TBBConan(ConanFile):
         # Disable auto link
         if self.settings.os == "Windows":
             self.cpp_info.defines.append("__TBB_NO_IMPLICIT_LINKAGE=1")
-
