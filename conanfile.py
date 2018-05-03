@@ -24,7 +24,7 @@ class TBBConan(ConanFile):
         "os": ["Windows", "Linux"],
         "compiler": ["Visual Studio", "gcc"],
         "build_type": ["Debug", "Release"],
-        "arch": ["x86_64", "x86"]
+        "arch": ["x86_64", "x86", "mips"]
     }
     options = {
         "dll_sign": [False, True],
@@ -68,13 +68,18 @@ class TBBConan(ConanFile):
         source_folder = os.path.join(self.source_folder, "src")
         #
         flags = ["-DTBB_NO_LEGACY=1"]
+        if self.settings.arch == "mips":
+            flags += [
+                "-D__TBB_64BIT_ATOMICS=0"
+            ]
         build_args = [
             "CXXFLAGS=\"%s\"" % " ".join(flags),
             "tbb_output_name=%s" % output_name,
             "build_type=%s" % str(self.settings.build_type).lower(),
             "arch=%s" % {
                         "x86": "ia32",
-                        "x86_64": "intel64"
+                        "x86_64": "intel64",
+                        "mips": "mips"
                     }.get(str(self.settings.arch)),
             "tbb_root=%s" % source_folder,
             "tbb_build_dir=%s" % self.build_folder
