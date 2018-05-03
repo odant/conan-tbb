@@ -1,0 +1,13 @@
+diff --git a/src/src/test/test_parallel_for.cpp b/src/src/test/test_parallel_for.cpp
+index 7408399..79d18ea 100644
+--- a/src/src/test/test_parallel_for.cpp
++++ b/src/src/test/test_parallel_for.cpp
+@@ -657,7 +657,7 @@ range_borders combine_range(const MapType& map) {
+ 
+ template <typename Partitioner>
+ void test_body() {
+-    for (unsigned int num_threads = tbb::tbb_thread::hardware_concurrency() / 4 + 1; num_threads < tbb::tbb_thread::hardware_concurrency(); num_threads *= 2)
++    for (unsigned int num_threads = tbb::tbb_thread::hardware_concurrency() / 2 + 1; num_threads < tbb::tbb_thread::hardware_concurrency(); num_threads *= 2)
+         for (size_t range_begin = 0, range_end = num_threads * 10 - 1, i = 0; i < 3; range_begin += num_threads, range_end += num_threads + 1, ++i) {
+             ets = ETSType(MapType());
+             tbb::task_arena limited(num_threads);
