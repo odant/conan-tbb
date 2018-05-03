@@ -62,7 +62,7 @@ def add_built_in_tests(builds):
     result = []
     for settings, options, env_vars, build_requires, reference in builds:
         options = deepcopy(options)
-        options["tbb:built_int_tests"] = built_in_tests
+        options["tbb:built_in_tests"] = built_in_tests
         result.append([settings, options, env_vars, build_requires, reference])
     return result
 
