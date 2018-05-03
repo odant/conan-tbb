@@ -1,5 +1,3 @@
-diff --git a/src/src/test/test_parallel_for.cpp b/src/src/test/test_parallel_for.cpp
-index 7408399..79d18ea 100644
 --- a/src/src/test/test_parallel_for.cpp
 +++ b/src/src/test/test_parallel_for.cpp
 @@ -657,7 +657,7 @@ range_borders combine_range(const MapType& map) {
