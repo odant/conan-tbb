@@ -32,7 +32,7 @@
 -	-$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=release malloc_test
 -	-$(MAKE) -C "$(work_dir)_release"  -r -f $(tbb_root)/build/Makefile.test cfg=release
 +	-$(MAKE) -C "$(work_dir)_$(build_type)"  -r -f $(tbb_root)/build/Makefile.tbbmalloc cfg=$(build_type) malloc_test
-+	-$(MAKE) -C "$(work_dir)_$(build_type)"  -r -f $(tbb_root)/build/Makefile.test cfg=$(build_type)
++	-$(MAKE) -C "$(work_dir)_$(build_type)"  -r -f $(tbb_root)/build/Makefile.test cfg=$(build_type) args=-v
  
  rml: mkdir
 -	$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.rml cfg=debug
