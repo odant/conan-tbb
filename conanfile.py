@@ -37,6 +37,7 @@ class TBBConan(ConanFile):
                       "linux.tbb_output_name.patch", \
                       "fixup-mips-harness.patch", \
                       "test_parallel_for-two-core.patch", \
+                      "test_task_scheduler_init-two-core.patch", \
                       "FindTBB.cmake"
     no_copy_source = True
     build_policy = "missing"
@@ -62,6 +63,7 @@ class TBBConan(ConanFile):
         tools.patch(patch_file="linux.tbb_output_name.patch")
         tools.patch(patch_file="fixup-mips-harness.patch")
         tools.patch(patch_file="test_parallel_for-two-core.patch")
+        tools.patch(patch_file="test_task_scheduler_init-two-core.patch")
 
     def build(self):
         output_name = "tbb"

@@ -1,0 +1,13 @@
+diff --git a/src/src/test/test_task_scheduler_init.cpp b/src/src/test/test_task_scheduler_init.cpp
+index e8b9e7f..8d7c43c 100644
+--- a/src/src/test/test_task_scheduler_init.cpp
++++ b/src/src/test/test_task_scheduler_init.cpp
+@@ -289,7 +289,7 @@ namespace TestBlockingTerminateNS {
+             }
+         };
+         void operator()() {
+-            const int numThreads = 4;
++            const int numThreads = tbb::tbb_thread::hardware_concurrency();
+             tbb::task_scheduler_init init( numThreads );
+             Harness::SpinBarrier barrier( numThreads );
+             tbb::parallel_for( 0, numThreads, Body( barrier ) );
