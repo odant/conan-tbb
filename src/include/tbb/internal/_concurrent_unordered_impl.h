@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2017 Intel Corporation
+    Copyright (c) 2005-2018 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -1468,7 +1468,7 @@ private:
         if (my_buckets[segment] == NULL) {
             size_type sz = segment_size(segment);
             raw_iterator * new_segment = my_allocator.allocate(sz);
-            std::memset(new_segment, 0, sz*sizeof(raw_iterator));
+            std::memset(static_cast<void*>(new_segment), 0, sz*sizeof(raw_iterator));
 
             if (my_buckets[segment].compare_and_swap( new_segment, NULL) != NULL)
                 my_allocator.deallocate(new_segment, sz);

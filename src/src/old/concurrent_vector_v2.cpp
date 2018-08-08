@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2017 Intel Corporation
+    Copyright (c) 2005-2018 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -71,7 +71,7 @@ public:
 void concurrent_vector_base::helper::extend_segment( concurrent_vector_base& v ) {
     const size_t pointers_per_long_segment = sizeof(void*)==4 ? 32 : 64;
     segment_t* s = (segment_t*)NFS_Allocate( pointers_per_long_segment, sizeof(segment_t), NULL );
-    std::memset( s, 0, pointers_per_long_segment*sizeof(segment_t) );
+    std::memset( static_cast<void*>(s), 0, pointers_per_long_segment*sizeof(segment_t) );
     // If other threads are trying to set pointers in the short segment, wait for them to finish their
     // assignments before we copy the short segment to the long segment.
     atomic_backoff backoff;

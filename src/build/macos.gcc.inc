@@ -1,4 +1,4 @@
-# Copyright (c) 2005-2017 Intel Corporation
+# Copyright (c) 2005-2018 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,6 +37,24 @@ LIBS = -lpthread
 LINK_FLAGS =
 LIB_LINK_FLAGS = -dynamiclib -install_name @rpath/$(BUILDING_LIBRARY)
 C_FLAGS = $(CPLUS_FLAGS)
+
+# gcc 4.8 and later support RTM intrinsics, but require command line switch to enable them
+ifneq (,$(shell gcc -dumpversion | egrep  "^(4\.[8-9]|[5-9])"))
+    RTM_KEY = -mrtm
+endif
+
+# gcc 5.0 and later have -Wsuggest-override option
+# enable it via a pre-included header in order to limit to C++11 and above
+ifneq (,$(shell gcc -dumpversion | egrep  "^([5-9])"))
+    INCLUDE_TEST_HEADERS = -include $(tbb_root)/src/test/harness_preload.h
+endif
+
+# gcc 6.0 and later have -flifetime-dse option that controls
+# elimination of stores done outside the object lifetime
+ifneq (,$(shell gcc -dumpversion | egrep  "^([6-9])"))
+    # keep pre-contruction stores for zero initialization
+    DSE_KEY = -flifetime-dse=1
+endif
 
 ifeq ($(cfg), release)
     CPLUS_FLAGS = -g -O2

@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2017 Intel Corporation
+    Copyright (c) 2005-2018 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -508,13 +508,13 @@ void ParallelTraverseTable( MyTable& table, size_t n, size_t expected_size ) {
     ASSERT( table.size()==expected_size, NULL );
     AtomicByte* array = new AtomicByte[n];
 
-    memset( array, 0, n*sizeof(AtomicByte) );
+    memset( static_cast<void*>(array), 0, n*sizeof(AtomicByte) );
     MyTable::range_type r = table.range(10);
     tbb::parallel_for( r, ParallelTraverseBody<MyTable::range_type>( array, n ));
     Check( array, n, expected_size );
 
     const MyTable& const_table = table;
-    memset( array, 0, n*sizeof(AtomicByte) );
+    memset( static_cast<void*>(array), 0, n*sizeof(AtomicByte) );
     MyTable::const_range_type cr = const_table.range(10);
     tbb::parallel_for( cr, ParallelTraverseBody<MyTable::const_range_type>( array, n ));
     Check( array, n, expected_size );
@@ -930,6 +930,7 @@ void TestExceptions() {
                     ASSERT( MyDataCount==100, "data leak?" );
                     ASSERT( size>=100, NULL );
                     CheckAllocator(victim, 100+t, t);
+                    /* Falls through. */
                 case ctor_copy:
                     CheckTable(src, 1000);
                     break;
