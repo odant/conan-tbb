@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2017 Intel Corporation
+    Copyright (c) 2005-2018 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -95,6 +95,7 @@ void call_parallel_invoke( size_t n, F0& f0, F1& f1, F2& f2, F3& f3, F4 &f4, F5 
     switch(n) {
     default:
         ASSERT(false, "number of arguments must be between 2 and 10");
+        /* Falls through. */
     case 2:
         if (context)
             tbb::parallel_invoke (f0, f1, *context);

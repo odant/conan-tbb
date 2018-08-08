@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2017 Intel Corporation
+    Copyright (c) 2005-2018 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@
     #pragma weak dlclose
 #endif /* __TBB_WEAK_SYMBOLS_PRESENT && !__TBB_DYNAMIC_LOAD_ENABLED */
 
-#include "tbb/tbb_misc.h"
+#include "tbb_misc.h"
 
 #define __USE_TBB_ATOMICS       ( !(__linux__&&__ia64__) || __TBB_BUILD )
 #define __USE_STATIC_DL_INIT    ( !__ANDROID__ )

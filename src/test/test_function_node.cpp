@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2017 Intel Corporation
+    Copyright (c) 2005-2018 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -585,7 +585,9 @@ int TestMain() {
     for( int p=MinThread; p<=MaxThread; ++p ) {
        test_concurrency(p);
    }
-
+#if __TBB_PREVIEW_LIGHTWEIGHT_POLICY
+   lightweight_testing::test<tbb::flow::function_node>(10);
+#endif
 #if TBB_PREVIEW_FLOW_GRAPH_FEATURES
     test_extract<tbb::flow::rejecting>();
     test_extract<tbb::flow::queueing>();

@@ -1,4 +1,4 @@
-# Copyright (c) 2005-2017 Intel Corporation
+# Copyright (c) 2005-2018 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -94,7 +94,7 @@ else
 	@$(MAKE) -C "$(work_dir)_$(cfg)"  -r -f $(tbb_root)/build/Makefile.test $@
 endif
 
-python_%:
+python_%: mkdir_release
 	$(MAKE) -C "$(work_dir)_release" -rf $(tbb_root)/python/Makefile $(subst python_,,$@)
 
 .PHONY: test_release test_debug test_release_no_depends test_debug_no_depends

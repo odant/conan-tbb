@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2017 Intel Corporation
+    Copyright (c) 2005-2018 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -155,7 +155,7 @@ namespace interface5 {
 
         //! Initialize buckets
         static void init_buckets( segment_ptr_t ptr, size_type sz, bool is_initial ) {
-            if( is_initial ) std::memset(ptr, 0, sz*sizeof(bucket) );
+            if( is_initial ) std::memset( static_cast<void*>(ptr), 0, sz*sizeof(bucket) );
             else for(size_type i = 0; i < sz; i++, ptr++) {
                 *reinterpret_cast<intptr_t*>(&ptr->mutex) = 0;
                 ptr->node_list = rehash_req;

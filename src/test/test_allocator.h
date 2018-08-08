@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2017 Intel Corporation
+    Copyright (c) 2005-2018 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -171,7 +171,7 @@ void TestBasic( A& a ) {
         DisableStderr disableStderr;
 #endif
         p1 = a.allocate(too_big);
-    } catch ( std::bad_alloc ) {
+    } catch ( std::bad_alloc& ) {
         exception_caught = true;
     }
     ASSERT( exception_caught, "allocate expected to throw bad_alloc" );
