@@ -8,7 +8,7 @@
  tbb_root?=.
  include $(tbb_root)/build/common.inc
  .PHONY: default all tbb tbbmalloc tbbproxy test examples
-@@ -29,32 +30,26 @@
+@@ -29,32 +30,26 @@ default: tbb tbbmalloc $(if $(use_proxy),tbbproxy)
  all: tbb tbbmalloc tbbproxy test examples
  
  tbb: mkdir
@@ -47,9 +47,9 @@
 -	$(MAKE) -C "$(work_dir)_release" -rf $(tbb_root)/python/Makefile install
 +	$(MAKE) -C "$(work_dir)_$(build_type)" -rf $(tbb_root)/python/Makefile install
  
- .PHONY: clean clean_examples mkdir info
- 
-@@ -69,12 +64,12 @@
+ doxygen:
+ 	doxygen Doxyfile
+@@ -72,12 +67,12 @@ clean_examples:
  	$(shell $(MAKE) -s -i -r -C examples -f Makefile tbb_root=.. clean >$(NUL) 2>$(NUL))
  
  mkdir:
