@@ -6,11 +6,10 @@ from conan.packager import ConanMultiPackager
 # Common settings
 username = "odant" if "CONAN_USERNAME" not in os.environ else None
 # Windows settings
-visual_versions = ["14", "15"] if "CONAN_VISUAL_VERSIONS" not in os.environ else None
+visual_versions = ["15"] if "CONAN_VISUAL_VERSIONS" not in os.environ else None
 visual_runtimes = ["MD", "MDd"] if "CONAN_VISUAL_RUNTIMES" not in os.environ else None
 visual_default_toolsets = {
-    "14": [None, "v140_xp"],
-    "15": [None, "v141_xp"]
+    "15": ["v141"]
 }
 visual_toolsets = None
 if "CONAN_VISUAL_TOOLSETS" in os.environ:
