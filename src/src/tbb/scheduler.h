@@ -55,8 +55,16 @@ struct scheduler_properties {
     //! Indicates that a scheduler is on outermost level.
     /**  Note that the explicit execute method will set this property. **/
     bool outermost : 1;
+#if __TBB_PREVIEW_CRITICAL_TASKS
+    //! Indicates that a scheduler is in the process of executing critical task(s).
+    bool has_taken_critical_task : 1;
+
+    //! Reserved bits
+    unsigned char : 5;
+#else
     //! Reserved bits
     unsigned char : 6;
+#endif /* __TBB_PREVIEW_CRITICAL_TASKS */
 };
 
 struct scheduler_state {
@@ -71,6 +79,7 @@ struct scheduler_state {
 
     //! Innermost task whose task::execute() is running. A dummy task on the outermost level.
     task* my_innermost_running_task;
+
 
     mail_inbox my_inbox;
 
@@ -122,7 +131,11 @@ public: // almost every class in TBB uses generic_scheduler
     static const size_t quick_task_size = 256-task_prefix_reservation_size;
 
     static bool is_version_3_task( task& t ) {
+#if __TBB_PREVIEW_CRITICAL_TASKS
+        return (t.prefix().extra_state & 0x7)>=0x1;
+#else
         return (t.prefix().extra_state & 0x0F)>=0x1;
+#endif
     }
 
     //! Position in the call stack specifying its maximal filling when stealing is still allowed
@@ -261,8 +274,20 @@ public: // almost every class in TBB uses generic_scheduler
         return t.prefix().extra_state==es_task_proxy;
     }
 
+    //! Attempts to steal a task from a randomly chosen thread/scheduler
+    task* steal_task( __TBB_ISOLATION_EXPR(isolation_tag isolation) );
+
     //! Steal task from another scheduler's ready pool.
-    task* steal_task( __TBB_ISOLATION_ARG( arena_slot& victim_arena_slot, isolation_tag isolation ) );
+    task* steal_task_from( __TBB_ISOLATION_ARG( arena_slot& victim_arena_slot, isolation_tag isolation ) );
+
+#if __TBB_PREVIEW_CRITICAL_TASKS
+    //! Tries to find critical task in critical task stream
+    task* get_critical_task( __TBB_ISOLATION_EXPR(isolation_tag isolation) );
+
+    //! Pushes task to critical task stream if it appears to be such task and returns
+    //! true. Otherwise does nothing and returns false.
+    bool handled_as_critical( task& t );
+#endif
 
     /** Initial size of the task deque sufficient to serve without reallocation
         4 nested parallel_for calls with iteration space of 65535 grains each. **/
@@ -691,6 +716,23 @@ inline void generic_scheduler::offload_task ( task& t, intptr_t /*priority*/ ) {
 }
 #endif /* __TBB_TASK_PRIORITY */
 
+#if __TBB_PREVIEW_CRITICAL_TASKS
+class critical_task_count_guard : internal::no_copy {
+public:
+    critical_task_count_guard(scheduler_properties& properties, task& t)
+        : my_properties(properties),
+          my_original_critical_task_state(properties.has_taken_critical_task) {
+        my_properties.has_taken_critical_task |= internal::is_critical(t);
+    }
+    ~critical_task_count_guard() {
+        my_properties.has_taken_critical_task = my_original_critical_task_state;
+    }
+private:
+    scheduler_properties& my_properties;
+    bool my_original_critical_task_state;
+};
+#endif /* __TBB_PREVIEW_CRITICAL_TASKS */
+
 #if __TBB_FP_CONTEXT || __TBB_TASK_GROUP_CONTEXT
 //! Helper class for tracking floating point context and task group context switches
 /** Assuming presence of an itt collector, in addition to keeping track of floating
@@ -698,7 +740,7 @@ inline void generic_scheduler::offload_task ( task& t, intptr_t /*priority*/ ) {
     context execution **/
 template <bool report_tasks>
 class context_guard_helper {
-#if __TBB_ITT_STRUCTURE_API
+#if __TBB_TASK_GROUP_CONTEXT
     const task_group_context *curr_ctx;
 #endif
 #if __TBB_FP_CONTEXT
@@ -707,7 +749,7 @@ class context_guard_helper {
 #endif
 public:
     context_guard_helper()
-#if __TBB_ITT_STRUCTURE_API
+#if __TBB_TASK_GROUP_CONTEXT
         : curr_ctx(NULL)
 #endif
     {
@@ -721,7 +763,7 @@ public:
         if ( curr_cpu_ctl_env != guard_cpu_ctl_env )
             guard_cpu_ctl_env.set_env();
 #endif
-#if __TBB_ITT_STRUCTURE_API
+#if __TBB_TASK_GROUP_CONTEXT
         if (report_tasks && curr_ctx)
             ITT_TASK_END;
 #endif
@@ -731,7 +773,7 @@ public:
 #if __TBB_FP_CONTEXT
         const cpu_ctl_env &ctl = *punned_cast<cpu_ctl_env*>(&ctx->my_cpu_ctl_env);
 #endif
-#if __TBB_ITT_STRUCTURE_API
+#if __TBB_TASK_GROUP_CONTEXT
         if(ctx != curr_ctx) {
 #endif
 #if __TBB_FP_CONTEXT
@@ -740,7 +782,7 @@ public:
                 curr_cpu_ctl_env.set_env();
             }
 #endif
-#if __TBB_ITT_STRUCTURE_API
+#if __TBB_TASK_GROUP_CONTEXT
             // if task group context was active, report end of current execution frame.
             if (report_tasks) {
                 if (curr_ctx)
