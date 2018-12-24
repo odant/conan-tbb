@@ -18,6 +18,10 @@
 
 */
 
+#if __TBB_CPF_BUILD
+#define TBB_DEPRECATED_FLOW_NODE_EXTRACTION 1
+#endif
+
 #include "harness_graph.h"
 
 #include "tbb/flow_graph.h"
@@ -40,7 +44,7 @@ struct fake_continue_sender : public tbb::flow::sender<tbb::flow::continue_msg>
     // Define implementations of virtual methods that are abstract in the base class
     bool register_successor( successor_type& ) __TBB_override { return false; }
     bool remove_successor( successor_type& )   __TBB_override { return false; }
-#if TBB_PREVIEW_FLOW_GRAPH_FEATURES
+#if TBB_DEPRECATED_FLOW_NODE_EXTRACTION
     typedef tbb::flow::sender<tbb::flow::continue_msg>::built_successors_type built_successors_type;
     built_successors_type bst;
     built_successors_type &built_successors() __TBB_override { return bst; }
@@ -81,7 +85,7 @@ void run_continue_nodes( int p, tbb::flow::graph& g, tbb::flow::continue_node< O
         for (size_t r = 0; r < num_receivers; ++r ) {
             tbb::flow::make_edge( n, receivers[r] );
         }
-#if TBB_PREVIEW_FLOW_GRAPH_FEATURES
+#if TBB_DEPRECATED_FLOW_NODE_EXTRACTION
         ASSERT(n.successor_count() == (size_t)num_receivers, NULL);
         ASSERT(n.predecessor_count() == 0, NULL);
         typename tbb::flow::continue_node<OutputType>::successor_list_type my_succs;
@@ -102,7 +106,7 @@ void run_continue_nodes( int p, tbb::flow::graph& g, tbb::flow::continue_node< O
             ASSERT( (int)c == p, NULL );
         }
 
-#if TBB_PREVIEW_FLOW_GRAPH_FEATURES
+#if TBB_DEPRECATED_FLOW_NODE_EXTRACTION
         for(sv_iter_type si=my_succs.begin(); si != my_succs.end(); ++si) {
             tbb::flow::remove_edge( n, **si );
         }
@@ -263,7 +267,7 @@ void test_two_graphs(){
     ASSERT(count==0, "Node executed without waiting for all predecessors");
 }
 
-#if TBB_PREVIEW_FLOW_GRAPH_FEATURES
+#if TBB_DEPRECATED_FLOW_NODE_EXTRACTION
 void test_extract() {
     int my_count = 0;
     tbb::flow::continue_msg cm;
@@ -362,10 +366,9 @@ void test_extract() {
 }
 #endif
 
-#if __TBB_PREVIEW_LIGHTWEIGHT_POLICY
-struct lightweight_policy_body {
+struct lightweight_policy_body : NoAssign {
     const tbb::tbb_thread::id my_thread_id;
-    tbb::atomic<int> my_count;
+    tbb::atomic<size_t> my_count;
 
     lightweight_policy_body() : my_thread_id(tbb::this_tbb_thread::get_id()) {
         my_count = 0;
@@ -383,7 +386,7 @@ void test_lightweight_policy() {
     tbb::flow::continue_node<tbb::flow::continue_msg, tbb::flow::lightweight> node2(g, lightweight_policy_body());
 
     tbb::flow::make_edge(node1, node2);
-    const int n = 10;
+    const size_t n = 10;
     for(size_t i = 0; i < n; ++i) {
         node1.try_put(tbb::flow::continue_msg());
     }
@@ -391,10 +394,9 @@ void test_lightweight_policy() {
 
     lightweight_policy_body body1 = tbb::flow::copy_body<lightweight_policy_body>(node1);
     lightweight_policy_body body2 = tbb::flow::copy_body<lightweight_policy_body>(node2);
-    ASSERT(int(body1.my_count) == n, "Body of the first node needs to be executed N times");
-    ASSERT(int(body2.my_count) == n, "Body of the second node needs to be executed N times");
+    ASSERT(body1.my_count == n, "Body of the first node needs to be executed N times");
+    ASSERT(body2.my_count == n, "Body of the second node needs to be executed N times");
 }
-#endif
 
 int TestMain() {
     if( MinThread<1 ) {
@@ -408,7 +410,7 @@ int TestMain() {
 #if __TBB_PREVIEW_LIGHTWEIGHT_POLICY
    test_lightweight_policy();
 #endif
-#if TBB_PREVIEW_FLOW_GRAPH_FEATURES
+#if TBB_DEPRECATED_FLOW_NODE_EXTRACTION
    test_extract();
 #endif
    return Harness::Done;

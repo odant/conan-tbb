@@ -63,14 +63,8 @@ ifeq ($(origin LIB_LINK_LIBS), undefined)
     LIB_LINK_LIBS = $(LIBDL) $(LIBS)
 endif
 
-# Define C & C++ compilers according to platform defaults or CXX & CC environment variables
-ifneq (,$(findstring environment, $(origin CXX)))
-CPLUS = $(CXX)
-endif
+# some platforms do not provide separate C-only compiler
 CONLY ?= $(CPLUS)
-ifneq (,$(findstring environment, $(origin CC)))
-CONLY = $(CC)
-endif
 
 # The most generic rules
 #$(1) - is the target pattern
@@ -95,7 +89,7 @@ $(foreach t,%.$(OBJ) $(TEST_AFFIXES_OBJS),$(eval $(call make-cxx-obj,$(t))))
 #$(2) - is the input obj files and libraries
 define make-test-binary
 	$(CPLUS) $(OUTPUT_KEY)$(strip $1) $(CPLUS_FLAGS) $(2) $(LIBS) $(LINK_FLAGS)
-endef 
+endef
 
 # LINK_FILES the list of options to link test specific files (libraries and object files)
 LINK_FILES+=$(TEST_LIBS)

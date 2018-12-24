@@ -18,8 +18,30 @@
 
 */
 
+#if __linux__ && !__ANDROID__
+// include <bits/c++config.h> indirectly so that <cstdlib> is not included
+#include <cstddef>
+// include <features.h> indirectly so that <stdlib.h> is not included
+#include <unistd.h>
+// Working around compiler issue with Anaconda's gcc 7.3 compiler package.
+// New gcc ported for old libc may provide their inline implementation
+// of aligned_alloc as required by new C++ standard, this makes it hard to
+// redefine aligned_alloc here. However, running on systems with new libc
+// version, it still needs it to be redefined, thus tricking system headers
+#if defined(__GLIBC_PREREQ) && !__GLIBC_PREREQ(2, 16) && _GLIBCXX_HAVE_ALIGNED_ALLOC
+// tell <cstdlib> that there is no aligned_alloc
+#undef _GLIBCXX_HAVE_ALIGNED_ALLOC
+// trick <stdlib.h> to define another symbol instead
+#define aligned_alloc __hidden_redefined_aligned_alloc
+// Fix the state and undefine the trick
+#include <cstdlib>
+#undef aligned_alloc
+#endif // defined(__GLIBC_PREREQ)&&!__GLIBC_PREREQ(2, 16)&&_GLIBCXX_HAVE_ALIGNED_ALLOC
+#endif // __linux__ && !__ANDROID__
+
 #include "proxy.h"
 #include "tbb/tbb_config.h"
+#include "tbb/tbb_environment.h"
 
 #if !defined(__EXCEPTIONS) && !defined(_CPPUNWIND) && !defined(__SUNPRO_CC)
     #if TBB_USE_EXCEPTIONS
@@ -39,6 +61,70 @@
 #define __TBB_NO_THROW throw()
 #endif
 
+#if MALLOC_UNIXLIKE_OVERLOAD_ENABLED || _WIN32 && !__TBB_WIN8UI_SUPPORT
+/*** internal global operator new implementation (Linux, Windows) ***/
+#include <new>
+
+// Synchronization primitives to protect original library pointers and new_handler 
+#include "Synchronize.h"
+
+#if __TBB_MSVC_PART_WORD_INTERLOCKED_INTRINSICS_PRESENT
+// Use MallocMutex implementation
+typedef MallocMutex ProxyMutex;
+#else
+// One byte atomic intrinsics are not available,
+// so use simple pointer based spin mutex
+class SimpleSpinMutex : tbb::internal::no_copy {
+    intptr_t flag;
+public:
+    class scoped_lock : tbb::internal::no_copy {
+        SimpleSpinMutex& mutex;
+    public:
+        scoped_lock( SimpleSpinMutex& m ) : mutex(m) {
+            while( !(AtomicFetchStore( &(m.flag), 1 ) == 0) );
+        }
+        ~scoped_lock() {
+            FencedStore(mutex.flag, 0);
+        }
+    };
+    friend class scoped_lock;
+};
+typedef SimpleSpinMutex ProxyMutex;
+#endif /* __TBB_MSVC_PART_WORD_INTERLOCKED_INTRINSICS_PRESENT */
+
+// In case there is no std::get_new_handler function
+// which provides synchronized access to std::new_handler
+#if !__TBB_CPP11_GET_NEW_HANDLER_PRESENT
+static ProxyMutex new_lock;
+#endif
+
+static inline void* InternalOperatorNew(size_t sz) {
+    void* res = scalable_malloc(sz);
+#if TBB_USE_EXCEPTIONS
+    while (!res) {
+        std::new_handler handler;
+#if __TBB_CPP11_GET_NEW_HANDLER_PRESENT
+        handler = std::get_new_handler();
+#else
+        {
+            ProxyMutex::scoped_lock lock(new_lock);
+            handler = std::set_new_handler(0);
+            std::set_new_handler(handler);
+        }
+#endif
+        if (handler) {
+            (*handler)();
+        } else {
+            throw std::bad_alloc();
+        }
+        res = scalable_malloc(sz);
+}
+#endif /* TBB_USE_EXCEPTIONS */
+    return res;
+}
+/*** end of internal global operator new implementation ***/
+#endif // MALLOC_UNIXLIKE_OVERLOAD_ENABLED || _WIN32 && !__TBB_WIN8UI_SUPPORT
+
 #if MALLOC_UNIXLIKE_OVERLOAD_ENABLED || MALLOC_ZONE_OVERLOAD_ENABLED
 
 #ifndef __THROW
@@ -46,7 +132,6 @@
 #endif
 
 /*** service functions and variables ***/
-
 #include <string.h> // for memset
 #include <unistd.h> // for sysconf
 
@@ -58,7 +143,6 @@ static inline void initPageSize()
 }
 
 #if MALLOC_UNIXLIKE_OVERLOAD_ENABLED
-#include "Customize.h" // FencedStore
 #include <dlfcn.h>
 #include <malloc.h>    // mallinfo
 
@@ -94,7 +178,7 @@ static intptr_t origFuncSearched;
 inline void InitOrigPointers()
 {
     // race is OK here, as different threads found same functions
-    if (!origFuncSearched) {
+    if (!FencedLoad(origFuncSearched)) {
         orig_free = dlsym(RTLD_NEXT, "free");
         orig_realloc = dlsym(RTLD_NEXT, "realloc");
         orig_msize = dlsym(RTLD_NEXT, "malloc_usable_size");
@@ -237,23 +321,11 @@ void *__libc_realloc(void *ptr, size_t size)
 
 /*** replacements for global operators new and delete ***/
 
-#include <new>
-
 void* operator new(size_t sz) __TBB_THROW_BAD_ALLOC {
-    void *res = scalable_malloc(sz);
-#if TBB_USE_EXCEPTIONS
-    if (NULL == res)
-        throw std::bad_alloc();
-#endif /* TBB_USE_EXCEPTIONS */
-    return res;
+    return InternalOperatorNew(sz);
 }
 void* operator new[](size_t sz) __TBB_THROW_BAD_ALLOC {
-    void *res = scalable_malloc(sz);
-#if TBB_USE_EXCEPTIONS
-    if (NULL == res)
-        throw std::bad_alloc();
-#endif /* TBB_USE_EXCEPTIONS */
-    return res;
+    return InternalOperatorNew(sz);
 }
 void operator delete(void* ptr) __TBB_NO_THROW {
     InitOrigPointers();
@@ -280,7 +352,6 @@ void operator delete[](void* ptr, const std::nothrow_t&) __TBB_NO_THROW {
 
 #endif /* MALLOC_UNIXLIKE_OVERLOAD_ENABLED */
 #endif /* MALLOC_UNIXLIKE_OVERLOAD_ENABLED || MALLOC_ZONE_OVERLOAD_ENABLED */
-
 
 #ifdef _WIN32
 #include <windows.h>
@@ -375,6 +446,7 @@ const char* known_bytecodes[] = {
     "C7442410000000008B",     // release free() ucrtbase.dll 10.0.14393.33
     "E90B000000CCCC",         // release _msize() ucrtbase.dll 10.0.14393.33
     "48895C24085748",         // release _aligned_msize() ucrtbase.dll 10.0.14393.33
+    "E903000000CCCC",         // release _aligned_msize() ucrtbase.dll 10.0.16299.522
     "48894C24084883EC28BA",   // debug prologue
     "4C894424184889542410",   // debug _aligned_msize() 10.0
     "48894C24084883EC2848",   // debug _aligned_free 10.0
@@ -455,25 +527,20 @@ __TBB_ORIG_ALLOCATOR_REPLACEMENT_WRAPPER(msvcr120d);
 __TBB_ORIG_ALLOCATOR_REPLACEMENT_WRAPPER(msvcr120);
 __TBB_ORIG_ALLOCATOR_REPLACEMENT_WRAPPER(ucrtbase);
 
-
 /*** replacements for global operators new and delete ***/
-
-#include <new>
 
 #if _MSC_VER && !defined(__INTEL_COMPILER)
 #pragma warning( push )
 #pragma warning( disable : 4290 )
 #endif
 
-void * operator_new(size_t sz) __TBB_THROW_BAD_ALLOC {
-    void *res = scalable_malloc(sz);
-    if (NULL == res) throw std::bad_alloc();
-    return res;
+/*** operator new overloads internals (Linux, Windows) ***/
+
+void* operator_new(size_t sz) __TBB_THROW_BAD_ALLOC {
+    return InternalOperatorNew(sz);
 }
 void* operator_new_arr(size_t sz) __TBB_THROW_BAD_ALLOC {
-    void *res = scalable_malloc(sz);
-    if (NULL == res) throw std::bad_alloc();
-    return res;
+    return InternalOperatorNew(sz);
 }
 void operator_delete(void* ptr) __TBB_NO_THROW {
     __TBB_malloc_safer_delete(ptr);
@@ -623,7 +690,7 @@ void SkipReplacement(const unicode_char_t *dllName)
     char *dllStr = buffer;
 
     errno_t ret = wcstombs_s(&real_sz, dllStr, sz, dllName, sz-1);
-    __TBB_ASSERT(!ret, "Dll name conversion failed")
+    __TBB_ASSERT(!ret, "Dll name conversion failed");
 #endif
 
     for (size_t i=0; i<arrayLength(modules_to_replace); i++)
@@ -642,7 +709,11 @@ void ReplaceFunctionWithStore( const unicode_char_t *dllName, const char *funcNa
 
     fprintf(stderr, "Failed to %s function %s in module %s\n",
             res==FRR_NOFUNC? "find" : "replace", funcName, dllName);
-    exit(1);
+
+    // Unable to replace a required function
+    // Aborting because incomplete replacement of memory management functions
+    // may leave the program in an invalid state
+    abort();
 }
 
 void doMallocReplacement()
@@ -703,15 +774,10 @@ extern "C" BOOL WINAPI DllMain( HINSTANCE hInst, DWORD callReason, LPVOID reserv
 
     if ( callReason==DLL_PROCESS_ATTACH && reserved && hInst ) {
 #if !__TBB_WIN8UI_SUPPORT
-#if TBBMALLOC_USE_TBB_FOR_ALLOCATOR_ENV_CONTROLLED
-        char pinEnvVariable[50];
-        if( GetEnvironmentVariable("TBBMALLOC_USE_TBB_FOR_ALLOCATOR", pinEnvVariable, 50))
+        if (!tbb::internal::GetBoolEnvironmentVariable("TBB_MALLOC_DISABLE_REPLACEMENT"))
         {
             doMallocReplacement();
         }
-#else
-        doMallocReplacement();
-#endif
 #endif // !__TBB_WIN8UI_SUPPORT
     }
 

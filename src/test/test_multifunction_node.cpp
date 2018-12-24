@@ -18,6 +18,10 @@
 
 */
 
+#if __TBB_CPF_BUILD
+#define TBB_DEPRECATED_FLOW_NODE_EXTRACTION 1
+#endif
+
 #include "harness_graph.h"
 
 #include "tbb/flow_graph.h"
@@ -441,7 +445,7 @@ void run_multiport_test(int num_threads) {
     tbb::flow::make_edge(tbb::flow::output_port<0>(mo_node), q0);
     tbb::flow::make_edge(tbb::flow::output_port<1>(mo_node), q1);
 
-#if TBB_PREVIEW_FLOW_GRAPH_FEATURES
+#if TBB_DEPRECATED_FLOW_NODE_EXTRACTION
     ASSERT(mo_node.predecessor_count() == 0, NULL);
     ASSERT(tbb::flow::output_port<0>(mo_node).successor_count() == 1, NULL);
     typedef typename mo_node_type::output_ports_type oports_type;
@@ -494,16 +498,16 @@ void test_ports_return_references() {
     test_output_ports_return_ref(mf_node);
 }
 
-#if TBB_PREVIEW_FLOW_GRAPH_FEATURES
+#if TBB_DEPRECATED_FLOW_NODE_EXTRACTION
 // the integer received indicates which output ports should succeed and which should fail
 // on try_put().
-typedef tbb::flow::multifunction_node<int, tbb::flow::tuple<int, int> > mf_node;
+typedef tbb::flow::multifunction_node<int, tbb::flow::tuple<int, int> > mf_node_type;
 
 struct add_to_counter {
     int my_invocations;
     int *counter;
     add_to_counter(int& var):counter(&var){ my_invocations = 0;}
-    void operator()(const int &i, mf_node::output_ports_type &outports) {
+    void operator()(const int &i, mf_node_type::output_ports_type &outports) {
         *counter+=1;
         ++my_invocations;
         if(i & 0x1) {
@@ -693,10 +697,8 @@ int TestMain() {
     }
     test_ports_return_references<tbb::flow::queueing>();
     test_ports_return_references<tbb::flow::rejecting>();
-#if __TBB_PREVIEW_LIGHTWEIGHT_POLICY
     lightweight_testing::test<tbb::flow::multifunction_node>(10);
-#endif
-#if TBB_PREVIEW_FLOW_GRAPH_FEATURES
+#if TBB_DEPRECATED_FLOW_NODE_EXTRACTION
     test_extract<tbb::flow::rejecting>();
     test_extract<tbb::flow::queueing>();
 #endif

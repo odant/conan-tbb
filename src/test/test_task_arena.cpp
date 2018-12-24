@@ -20,10 +20,13 @@
 
 #define TBB_PREVIEW_LOCAL_OBSERVER 1
 #define __TBB_EXTRA_DEBUG 1
+#define TBB_PREVIEW_GLOBAL_CONTROL 1
 
 #include <stdexcept>
 #include <cstdlib>
 #include <cstdio>
+#include <vector>
+#include <set>
 
 #include "harness_fp.h"
 
@@ -36,6 +39,7 @@
 #endif /* __TBB_TASK_ISOLATION */
 
 #include "tbb/task_arena.h"
+#include "tbb/atomic.h"
 #include "tbb/task_scheduler_observer.h"
 #include "tbb/task_scheduler_init.h"
 #include "tbb/parallel_for.h"
@@ -51,6 +55,7 @@
 #pragma comment(lib, __TBB_STRING(__TBB_LIB_NAME))
 #endif
 
+#include "tbb/global_control.h"
 //--------------------------------------------------//
 // Test that task_arena::initialize and task_arena::terminate work when doing nothing else.
 /* maxthread is treated as the biggest possible concurrency level. */
@@ -185,11 +190,20 @@ struct AsynchronousWork : NoAssign {
 // Test that task_arenas might be created and used from multiple application threads.
 // Also tests arena observers. The parameter p is the index of an app thread running this test.
 void TestConcurrentArenasFunc(int idx) {
+    // A regression test for observer activation order:
+    // check that arena observer can be activated before local observer
+    struct LocalObserver : public tbb::task_scheduler_observer {
+        LocalObserver() : tbb::task_scheduler_observer(/*local=*/true) { observe(true); }
+    };
     tbb::task_arena a1;
     a1.initialize(1,0);
     ArenaObserver o1(a1, 1, 0, idx*2+1); // the last argument is a "unique" observer/arena id for the test
+    ASSERT(o1.is_observing(), "Arena observer has not been activated");
+    LocalObserver lo;
+    ASSERT(lo.is_observing(), "Local observer has not been activated");
     tbb::task_arena a2(2,1);
     ArenaObserver o2(a2, 2, 1, idx*2+2);
+    ASSERT(o2.is_observing(), "Arena observer has not been activated");
     Harness::SpinBarrier barrier(2);
     AsynchronousWork work(barrier);
     a1.enqueue(work); // put async work
@@ -879,9 +893,8 @@ namespace TestIsolatedExecuteNS {
         for ( int i = 0; i < 5; ++i ) {
             HeavyMixTestBody b( random, isolated_level, 1, false );
             b( 0 );
-            REMARK( "\rHeavyMixTest: %d of 10", i+1 );
+            REMARK( "." );
         }
-        REMARK( "\n" );
     }
     //--------------------------------------------------//
     struct ContinuationTestReduceBody : NoAssign {
@@ -976,9 +989,68 @@ namespace TestIsolatedExecuteNS {
         tbb::this_task_arena::isolate(body);
         ASSERT(body.state == 0x93682a12, "The wrong state");
     }
+
+    class TestEnqueueTask : public tbb::task {
+        bool enqueued;
+        tbb::enumerable_thread_specific<bool>& executed;
+        tbb::atomic<int>& completed;
+    public:
+        static const int N = 100;
+
+        TestEnqueueTask(bool enq, tbb::enumerable_thread_specific<bool>& exe, tbb::atomic<int>& c)
+            : enqueued(enq), executed(exe), completed(c) {}
+        tbb::task* execute() __TBB_override {
+            if (enqueued) {
+                executed.local() = true;
+                ++completed;
+                __TBB_Yield();
+            } else {
+                parent()->add_ref_count(N);
+                for (int i = 0; i < N; ++i)
+                    tbb::task::enqueue(*new (parent()->allocate_child()) TestEnqueueTask(true, executed, completed));
+            }
+            return NULL;
+        }
+    };
+
+    class TestEnqueueIsolateBody : NoCopy {
+        tbb::enumerable_thread_specific<bool>& executed;
+        tbb::atomic<int>& completed;
+    public:
+        TestEnqueueIsolateBody(tbb::enumerable_thread_specific<bool>& exe, tbb::atomic<int>& c)
+            : executed(exe), completed(c) {}
+        void operator()() {
+            tbb::task::spawn_root_and_wait(*new (tbb::task::allocate_root()) TestEnqueueTask(false, executed, completed));
+        }
+    };
+
+    void TestEnqueue() {
+        tbb::enumerable_thread_specific<bool> executed(false);
+        tbb::atomic<int> completed;
+
+        // Check that the main thread can process enqueued tasks.
+        completed = 0;
+        TestEnqueueIsolateBody b1(executed, completed);
+        b1();
+        if (!executed.local())
+            REPORT("Warning: No one enqueued task has executed by the main thread.\n");
+
+        executed.local() = false;
+        completed = 0;
+        const int N = 100;
+        // Create enqueued tasks out of isolation.
+        for (int i = 0; i < N; ++i)
+            tbb::task::enqueue(*new (tbb::task::allocate_root()) TestEnqueueTask(true, executed, completed));
+        TestEnqueueIsolateBody b2(executed, completed);
+        tbb::this_task_arena::isolate(b2);
+        ASSERT(executed.local() == false, "An enqueued task was executed within isolate.");
+
+        while (completed < TestEnqueueTask::N + N) __TBB_Yield();
+    }
 }
 
 void TestIsolatedExecute() {
+    REMARK("TestIsolatedExecute");
     // At least 3 threads (owner + 2 thieves) are required to reproduce a situation when the owner steals outer
     // level task on a nested level. If we have only one thief then it will execute outer level tasks first and
     // the owner will not have a possibility to steal outer level tasks.
@@ -986,15 +1058,17 @@ void TestIsolatedExecute() {
     {
         // Too many threads require too many work to reproduce the stealing from outer level.
         tbb::task_scheduler_init init( max(num_threads, 7) );
-        TestIsolatedExecuteNS::TwoLoopsTest();
-        TestIsolatedExecuteNS::HeavyMixTest();
-        TestIsolatedExecuteNS::ContinuationTest();
-        TestIsolatedExecuteNS::ExceptionTest();
+        REMARK("."); TestIsolatedExecuteNS::TwoLoopsTest();
+        REMARK("."); TestIsolatedExecuteNS::HeavyMixTest();
+        REMARK("."); TestIsolatedExecuteNS::ContinuationTest();
+        REMARK("."); TestIsolatedExecuteNS::ExceptionTest();
     }
     tbb::task_scheduler_init init(num_threads);
-    TestIsolatedExecuteNS::HeavyMixTest();
-    TestIsolatedExecuteNS::ContinuationTest();
-    TestIsolatedExecuteNS::TestNonConstBody();
+    REMARK("."); TestIsolatedExecuteNS::HeavyMixTest();
+    REMARK("."); TestIsolatedExecuteNS::ContinuationTest();
+    REMARK("."); TestIsolatedExecuteNS::TestNonConstBody();
+    REMARK("."); TestIsolatedExecuteNS::TestEnqueue();
+    REMARK("\rTestIsolatedExecute: done                                                  \n");
 }
 #endif /* __TBB_TASK_ISOLATION */
 //--------------------------------------------------//
@@ -1388,7 +1462,140 @@ void TestDefaultWorkersLimit() {
 }
 //--------------------------------------------------//
 
-int TestMain () {
+// MyObserver checks if threads join to the same arena
+struct MyObserver: public tbb::task_scheduler_observer {
+    tbb::enumerable_thread_specific<tbb::task_arena*>& my_tls;
+    tbb::task_arena& my_arena;
+    tbb::atomic<int>& my_failure_counter;
+    tbb::atomic<int>& my_counter;
+
+    MyObserver(tbb::task_arena& a,
+        tbb::enumerable_thread_specific<tbb::task_arena*>& tls,
+        tbb::atomic<int>& failure_counter,
+        tbb::atomic<int>& counter)
+        : tbb::task_scheduler_observer(a), my_tls(tls), my_arena(a),
+        my_failure_counter(failure_counter), my_counter(counter) {
+        observe(true);
+    }
+    void on_scheduler_entry(bool worker) __TBB_override {
+        if (worker) {
+            ++my_counter;
+            tbb::task_arena*& cur_arena = my_tls.local();
+            if (cur_arena != 0 && cur_arena != &my_arena) {
+                ++my_failure_counter;
+            }
+            cur_arena = &my_arena;
+        }
+    }
+};
+
+struct MyLoopBody {
+    Harness::SpinBarrier& m_barrier;
+    MyLoopBody(Harness::SpinBarrier& b):m_barrier(b) { }
+    void operator()(int) const {
+        m_barrier.wait();
+    }
+};
+
+struct TaskForArenaExecute {
+    Harness::SpinBarrier& m_barrier;
+    TaskForArenaExecute(Harness::SpinBarrier& b):m_barrier(b) { }
+    void operator()() const {
+         tbb::parallel_for(0, tbb::this_task_arena::max_concurrency(),
+             MyLoopBody(m_barrier), tbb::simple_partitioner()
+         );
+    }
+};
+
+struct ExecuteParallelFor {
+    int n_per_thread;
+    int n_repetitions;
+    std::vector<tbb::task_arena>& arenas;
+    Harness::SpinBarrier& arena_barrier;
+    Harness::SpinBarrier& master_barrier;
+    ExecuteParallelFor(const int n_per_thread_, const int n_repetitions_,
+        std::vector<tbb::task_arena>& arenas_,
+        Harness::SpinBarrier& arena_barrier_, Harness::SpinBarrier& master_barrier_)
+            : n_per_thread(n_per_thread_), n_repetitions(n_repetitions_), arenas(arenas_),
+              arena_barrier(arena_barrier_), master_barrier(master_barrier_){ }
+    void operator()(int i) const {
+        for (int j = 0; j < n_repetitions; ++j) {
+            arenas[i].execute(TaskForArenaExecute(arena_barrier));
+            for(volatile int k = 0; k < n_per_thread; ++k){/* waiting until workers fall asleep */}
+            master_barrier.wait();
+        }
+    }
+};
+
+// if n_threads == -1 then global_control initialized with default value
+void TestArenaWorkersMigrationWithNumThreads(int n_threads = 0) {
+    if (n_threads == 0) {
+        n_threads = tbb::task_scheduler_init::default_num_threads();
+    }
+    const int max_n_arenas = 8;
+    int n_arenas = 2;
+    if(n_threads >= 16)
+        n_arenas = max_n_arenas;
+    else if (n_threads >= 8)
+        n_arenas = 4;
+    n_threads = n_arenas * (n_threads / n_arenas);
+    const int n_per_thread = 10000000;
+    const int n_repetitions = 100;
+    const int n_outer_repetitions = 20;
+    std::multiset<float> failure_ratio; // for median calculating
+    tbb::global_control control(tbb::global_control::max_allowed_parallelism, n_threads - (n_arenas - 1));
+    Harness::SpinBarrier master_barrier(n_arenas);
+    Harness::SpinBarrier arena_barrier(n_threads);
+    MyObserver* observer[max_n_arenas];
+    std::vector<tbb::task_arena> arenas(n_arenas);
+    tbb::atomic<int> failure_counter;
+    tbb::atomic<int> counter;
+    tbb::enumerable_thread_specific<tbb::task_arena*> tls;
+    for (int i = 0; i < n_arenas; ++i) {
+        arenas[i].initialize(n_threads / n_arenas);
+        observer[i] = new MyObserver(arenas[i], tls, failure_counter, counter);
+    }
+    int ii = 0;
+    for (; ii < n_outer_repetitions; ++ii) {
+        failure_counter = 0;
+        counter = 0;
+        // Main code
+        NativeParallelFor(n_arenas, ExecuteParallelFor(n_per_thread, n_repetitions,
+            arenas, arena_barrier, master_barrier));
+		// TODO: get rid of check below by setting ratio between n_threads and n_arenas
+        failure_ratio.insert((counter != 0 ? float(failure_counter) / counter : 1.0f));
+        tls.clear();
+        // collect 3 elements in failure_ratio before calculating median
+        if (ii > 1) {
+            std::multiset<float>::iterator it = failure_ratio.begin();
+            std::advance(it, failure_ratio.size() / 2);
+            if (*it < 0.02)
+                break;
+        }
+    }
+    for (int i = 0; i < n_arenas; ++i) {
+        delete observer[i];
+    }
+    // check if median is so big
+    std::multiset<float>::iterator it = failure_ratio.begin();
+    std::advance(it, failure_ratio.size() / 2);
+	// TODO: decrease constants 0.05 and 0.3 by setting ratio between n_threads and n_arenas
+    if (*it > 0.05) {
+        REPORT("Warning: So many cases when threads join to different arenas.\n");
+        ASSERT(*it <= 0.3, "A lot of cases when threads join to different arenas.\n");
+    }
+}
+
+void TestArenaWorkersMigration() {
+    TestArenaWorkersMigrationWithNumThreads(4);
+    if (tbb::task_scheduler_init::default_num_threads() != 4) {
+        TestArenaWorkersMigrationWithNumThreads();
+    }
+}
+
+//--------------------------------------------------//
+
+int TestMain() {
 #if __TBB_TASK_ISOLATION
     TestIsolatedExecute();
 #endif /* __TBB_TASK_ISOLATION */
@@ -1405,6 +1612,7 @@ int TestMain () {
     TestMultipleWaits();
     TestMoveSemantics();
     TestReturnValue();
+    TestArenaWorkersMigration();
     return Harness::Done;
 }
 
