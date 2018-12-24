@@ -1,6 +1,8 @@
+diff --git a/src/src/test/test_parallel_for.cpp b/src/src/test/test_parallel_for.cpp
+index 8a7857f..62092d1 100644
 --- a/src/src/test/test_parallel_for.cpp
 +++ b/src/src/test/test_parallel_for.cpp
-@@ -657,7 +657,7 @@ range_borders combine_range(const MapType& map) {
+@@ -658,7 +658,7 @@ range_borders combine_range(const MapType& map) {
  
  template <typename Partitioner>
  void test_body() {
