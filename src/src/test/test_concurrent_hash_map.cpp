@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2018 Intel Corporation
+    Copyright (c) 2005-2019 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -883,9 +883,33 @@ void TestRehash() {
     }
 }
 
+template<typename base_alloc_t, typename count_t = tbb::atomic<size_t> >
+class only_node_counting_allocator : public local_counting_allocator<base_alloc_t, count_t> {
+    typedef local_counting_allocator<base_alloc_t, count_t> base_type;
+public:
+    template<typename U>
+    struct rebind {
+        typedef only_node_counting_allocator<typename base_alloc_t::template rebind<U>::other,count_t> other;
+    };
+
+    only_node_counting_allocator() : base_type() {}
+    only_node_counting_allocator(const only_node_counting_allocator& a) : base_type(a) {}
+
+    template<typename U>
+    only_node_counting_allocator(const only_node_counting_allocator<U>& a) : base_type(a) {}
+
+    typename base_type::pointer allocate(const typename base_type::size_type n) {
+        if ( n > 1) {
+            return base_alloc_t::allocate(n);
+        } else {
+            return base_type::allocate(n);
+        }
+    }
+};
+
 #if TBB_USE_EXCEPTIONS
 void TestExceptions() {
-    typedef local_counting_allocator<tbb::tbb_allocator<MyData2> > allocator_t;
+    typedef only_node_counting_allocator<tbb::tbb_allocator<MyData2> > allocator_t;
     typedef tbb::concurrent_hash_map<MyKey,MyData2,MyHashCompare,allocator_t> ThrowingTable;
     enum methods {
         zero_method = 0,
@@ -916,6 +940,14 @@ void TestExceptions() {
                         victim = src;
                     } break;
                 case op_insert: {
+#if __TBB_CPP11_RVALUE_REF_PRESENT && __TBB_CPP11_VARIADIC_TEMPLATES_PRESENT && __TBB_CPP11_TUPLE_PRESENT
+                        // Insertion in cpp11 don't make copy constructions
+                        // during the insertion, so we need to decrement limit
+                        // to throw an exception in the right place and to prevent
+                        // successful insertion of one unexpected item
+                        if (MyDataCountLimit)
+                            --MyDataCountLimit;
+#endif
                         FillTable( victim, 1000 );
                     } break;
                 default:;
@@ -1386,6 +1418,76 @@ void TestMoveSupport(){
 }
 #endif //__TBB_CPP11_RVALUE_REF_PRESENT
 
+#if __TBB_CPP17_DEDUCTION_GUIDES_PRESENT
+
+template <template <typename...> typename TMap>
+void TestDeductionGuides() {
+    using Key = int;
+    using Value = std::string;
+
+    using ComplexType = std::pair<Key, Value>;
+    using ComplexTypeConst = std::pair<const Key, Value>;
+
+    using DefaultCompare = tbb::tbb_hash_compare<Key>;
+    using Compare = debug_hash_compare<Key>;
+    using DefaultAllocator = tbb::tbb_allocator<ComplexTypeConst>;
+    using Allocator = std::allocator<ComplexType>;
+
+    std::vector<ComplexType> v;
+    auto l = { ComplexTypeConst(1, "one"), ComplexTypeConst(2, "two") };
+    Compare compare;
+    Allocator allocator;
+
+    // check TMap(InputIterator, InputIterator)
+    TMap m1(v.begin(), v.end());
+    static_assert(std::is_same<decltype(m1), TMap<Key, Value, DefaultCompare, DefaultAllocator>>::value);
+
+    // check TMap(InputIterator, InputIterator, HashCompare)
+    TMap m2(v.begin(), v.end(), compare);
+    static_assert(std::is_same<decltype(m2), TMap<Key, Value, Compare>>::value);
+
+    // check TMap(InputIterator, InputIterator, HashCompare, Allocator)
+    TMap m3(v.begin(), v.end(), compare, allocator);
+    static_assert(std::is_same<decltype(m3), TMap<Key, Value, Compare, Allocator>>::value);
+
+    // check TMap(InputIterator, InputIterator, Allocator)
+    TMap m4(v.begin(), v.end(), allocator);
+    static_assert(std::is_same<decltype(m4), TMap<Key, Value, DefaultCompare, Allocator>>::value);
+
+    // check TMap(std::initializer_list)
+    TMap m5(l);
+    static_assert(std::is_same<decltype(m5), TMap<Key, Value, DefaultCompare, DefaultAllocator>>::value);
+
+    // check TMap(std::initializer_list, HashCompare)
+    TMap m6(l, compare);
+    static_assert(std::is_same<decltype(m6), TMap<Key, Value, Compare, DefaultAllocator>>::value);
+
+    // check TMap(std::initializer_list, HashCompare, Allocator)
+    TMap m7(l, compare, allocator);
+    static_assert(std::is_same<decltype(m7), TMap<Key, Value, Compare, Allocator>>::value);
+
+    // check TMap(std::initializer_list, Allocator)
+    TMap m8(l, allocator);
+    static_assert(std::is_same<decltype(m8), TMap<Key, Value, DefaultCompare, Allocator>>::value);
+
+    // check TMap(TMap &)
+    TMap m9(m1);
+    static_assert(std::is_same<decltype(m9), decltype(m1)>::value);
+
+    // check TMap(TMap &, Allocator)
+    TMap m10(m4, allocator);
+    static_assert(std::is_same<decltype(m10), decltype(m4)>::value);
+
+    // check TMap(TMap &&)
+    TMap m11(std::move(m1));
+    static_assert(std::is_same<decltype(m11), decltype(m1)>::value);
+
+    // check TMap(TMap &&, Allocator)
+    TMap m12(std::move(m4), allocator);
+    static_assert(std::is_same<decltype(m12), decltype(m4)>::value);
+}
+#endif // __TBB_CPP17_DEDUCTION_GUIDES_PRESENT
+
 template<typename Key>
 struct non_default_constructible_hash_compare : tbb::tbb_hash_compare<Key> {
     non_default_constructible_hash_compare() {
@@ -1417,6 +1519,97 @@ void TestHashCompareConstructors() {
     map_type map8({}, compare, allocator);
 #endif
 }
+
+#if __TBB_CPP11_RVALUE_REF_PRESENT && __TBB_CPP11_VARIADIC_TEMPLATES_PRESENT && !__TBB_SCOPED_ALLOCATOR_BROKEN
+#include <scoped_allocator>
+
+template<typename Allocator>
+class allocator_aware_data {
+public:
+    static bool assert_on_constructions;
+    typedef Allocator allocator_type;
+
+    allocator_aware_data(const allocator_type& allocator = allocator_type())
+        : my_allocator(allocator), my_value(0) {}
+    allocator_aware_data(int v, const allocator_type& allocator = allocator_type())
+        : my_allocator(allocator), my_value(v) {}
+    allocator_aware_data(const allocator_aware_data&) {
+        ASSERT(!assert_on_constructions, "Allocator should propogate to the data during copy construction");
+    }
+    allocator_aware_data(allocator_aware_data&&) {
+        ASSERT(!assert_on_constructions, "Allocator should propogate to the data during move construction");
+    }
+    allocator_aware_data(const allocator_aware_data& rhs, const allocator_type& allocator)
+        : my_allocator(allocator), my_value(rhs.my_value) {}
+    allocator_aware_data(allocator_aware_data&& rhs, const allocator_type& allocator)
+        : my_allocator(allocator), my_value(rhs.my_value) {}
+
+    int value() const { return my_value; }
+private:
+    allocator_type my_allocator;
+    int my_value;
+};
+
+struct custom_hash_compare {
+    template<typename Allocator>
+    static size_t hash(const allocator_aware_data<Allocator>& key) {
+        return tbb::tbb_hash_compare<int>::hash(key.value());
+    }
+
+    template<typename Allocator>
+    static bool equal(const allocator_aware_data<Allocator>& key1, const allocator_aware_data<Allocator>& key2) {
+        return tbb::tbb_hash_compare<int>::equal(key1.value(), key2.value());
+    }
+};
+
+template<typename Allocator>
+bool allocator_aware_data<Allocator>::assert_on_constructions = false;
+
+void TestScopedAllocator() {
+    typedef allocator_aware_data<std::scoped_allocator_adaptor<tbb::tbb_allocator<int>>> allocator_data_type;
+    typedef std::scoped_allocator_adaptor<tbb::tbb_allocator<allocator_data_type>> allocator_type;
+    typedef tbb::concurrent_hash_map<allocator_data_type, allocator_data_type,
+                                     custom_hash_compare, allocator_type> hash_map_type;
+
+    allocator_type allocator;
+    allocator_data_type key1(1, allocator), key2(2, allocator);
+    allocator_data_type data1(1, allocator), data2(data1, allocator);
+    hash_map_type map1(allocator), map2(allocator);
+
+    hash_map_type::value_type v1(key1, data1), v2(key2, data2);
+
+    auto init_list = { v1, v2 };
+
+    allocator_data_type::assert_on_constructions = true;
+    map1.emplace(key1, data1);
+    map2.emplace(key2, std::move(data2));
+
+    map1.clear();
+    map2.clear();
+
+    map1.insert(v1);
+    map2.insert(std::move(v2));
+
+    map1.clear();
+    map2.clear();
+
+    map1.insert(init_list);
+
+    map1.clear();
+    map2.clear();
+
+    hash_map_type::accessor a;
+    map2.insert(a, allocator_data_type(3));
+    a.release();
+
+    map1 = map2;
+    map2 = std::move(map1);
+
+    hash_map_type map3(allocator);
+    map3.rehash(1000);
+    map3 = map2;
+}
+#endif
 
 //------------------------------------------------------------------------
 // Test driver
@@ -1477,6 +1670,13 @@ int TestMain () {
 
     TestCPP11Types();
     TestHashCompareConstructors();
+
+#if __TBB_CPP17_DEDUCTION_GUIDES_PRESENT
+    TestDeductionGuides<tbb::concurrent_hash_map>();
+#endif
+#if __TBB_CPP11_RVALUE_REF_PRESENT && __TBB_CPP11_VARIADIC_TEMPLATES_PRESENT && !__TBB_SCOPED_ALLOCATOR_BROKEN
+    TestScopedAllocator();
+#endif
 
     return Harness::Done;
 }

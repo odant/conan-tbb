@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2018 Intel Corporation
+    Copyright (c) 2005-2019 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -1254,7 +1254,7 @@ void TestReallocDecreasing() {
     size_t reallocSize = (startSize / 2) - 1000; // exact realloc
     while(reallocSize > maxBinnedSize) {
 
-        // Prevent huge/large objects caching 
+        // Prevent huge/large objects caching
         defaultMemPool->extMemPool.loc.cleanAll();
         // Prevent local large object caching
         TLSData *tls = defaultMemPool->getTLS(/*create=*/false);
@@ -1283,6 +1283,93 @@ void TestReallocDecreasing() {
     /* TODO: Decreasing reallocation of large objects that fit backend cache */
     /* TODO: Small objects decreasing reallocation test */
 }
+#if !__TBB_WIN8UI_SUPPORT && defined(_WIN32)
+
+#include "../src/tbbmalloc/tbb_function_replacement.cpp"
+#include <string>
+namespace FunctionReplacement {
+    FunctionInfo funcInfo = { "funcname","dllname" };
+    char **func_replacement_log;
+    int status;
+
+    void LogCleanup() {
+        // Free all allocated memory
+        for (unsigned i = 0; i < Log::record_number; i++){
+            HeapFree(GetProcessHeap(), 0, Log::records[i]);
+        }
+        for (unsigned i = 0; i < Log::RECORDS_COUNT + 1; i++){
+            Log::records[i] = NULL;
+        }
+        Log::replacement_status = true;
+        Log::record_number = 0;
+    }
+
+    void TestEmptyLog() {
+        status = TBB_malloc_replacement_log(&func_replacement_log);
+
+        ASSERT(status == -1, "Status is true, but log is empty");
+        ASSERT(*func_replacement_log == NULL, "Log must be empty");
+    }
+
+    void TestLogOverload() {
+        for (int i = 0; i < 1000; i++)
+            Log::record(funcInfo, "opcode string", true);
+
+        status = TBB_malloc_replacement_log(&func_replacement_log);
+        // Find last record
+        for (; *(func_replacement_log + 1) != 0; func_replacement_log++) {}
+
+        std::string last_line(*func_replacement_log);
+        ASSERT(status == 0, "False status, but all functions found");
+        ASSERT(last_line.compare("Log was truncated.") == 0, "Log overflow was not handled");
+
+        // Change status
+        Log::record(funcInfo, "opcode string", false);
+        status = TBB_malloc_replacement_log(NULL);
+        ASSERT(status == -1, "Status is true, but we have false search case");
+
+        LogCleanup();
+    }
+
+    void TestFalseSearchCase() {
+        Log::record(funcInfo, "opcode string", false);
+        std::string expected_line = "Fail: "+ std::string(funcInfo.funcName) + " (" +
+                         std::string(funcInfo.dllName) + "), byte pattern: <opcode string>";
+
+        status = TBB_malloc_replacement_log(&func_replacement_log);
+
+        ASSERT(expected_line.compare(*func_replacement_log) == 0, "Wrong last string contnent");
+        ASSERT(status == -1, "Status is true, but we have false search case");
+        LogCleanup();
+    }
+
+    void TestWrongFunctionInDll(){
+        HMODULE ucrtbase_handle = GetModuleHandle("ucrtbase.dll");
+        if (ucrtbase_handle) {
+            IsPrologueKnown("ucrtbase.dll", "fake_function", NULL, ucrtbase_handle);
+            std::string expected_line = "Fail: fake_function (ucrtbase.dll), byte pattern: <unknown>";
+
+            status = TBB_malloc_replacement_log(&func_replacement_log);
+
+            ASSERT(expected_line.compare(*func_replacement_log) == 0, "Wrong last string contnent");
+            ASSERT(status == -1, "Status is true, but we have false search case");
+            LogCleanup();
+        } else {
+            REMARK("Cannot found ucrtbase.dll on system, test skipped!\n");
+        }
+    }
+}
+
+void TesFunctionReplacementLog() {
+    using namespace FunctionReplacement;
+    // Do not reorder the test cases
+    TestEmptyLog();
+    TestLogOverload();
+    TestFalseSearchCase();
+    TestWrongFunctionInDll();
+}
+
+#endif /*!__TBB_WIN8UI_SUPPORT && defined(_WIN32)*/
 
 int TestMain () {
     scalable_allocation_mode(USE_HUGE_PAGES, 0);
@@ -1323,6 +1410,12 @@ int TestMain () {
         REMARK("Transparent Huge Pages is not supported on the system - skipped the test\n");
     }
 #endif
+
+
+#if !__TBB_WIN8UI_SUPPORT && defined(_WIN32)
+    TesFunctionReplacementLog();
+#endif
+
     return Harness::Done;
 }
 

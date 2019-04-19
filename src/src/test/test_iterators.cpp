@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2017-2018 Intel Corporation
+    Copyright (c) 2017-2019 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -20,9 +20,10 @@
 
 #include "tbb/tbb_config.h"
 
-#if __TBB_CPP11_PRESENT && __TBB_CPP11_DECLTYPE_PRESENT
+#if __TBB_CPP11_PRESENT
 
 #include "tbb/iterators.h"
+#include "tbb/tbb_stddef.h"
 
 #include <vector>
 #include <iostream>
@@ -34,6 +35,16 @@
 //common checks of a random access iterator functionality
 template <typename RandomIt>
 void test_random_iterator(const RandomIt& it) {
+    // check that RandomIt has all necessary publicly accessible member types
+    {
+        auto t1 = typename RandomIt::difference_type{};
+        auto t2 = typename RandomIt::value_type{};
+        typename RandomIt::reference ref = *it;
+        tbb::internal::suppress_unused_warning(ref);
+        auto t3 = typename RandomIt::pointer{};
+        typename RandomIt::iterator_category{};
+    }
+
     ASSERT(  it == it,      "== returned false negative");
     ASSERT(!(it == it + 1), "== returned false positive");
     ASSERT(  it != it + 1,  "!= returned false negative");
@@ -104,7 +115,10 @@ struct test_counting_iterator {
         ASSERT((0 <= begin) && (begin <= end) && (end <= IntType(in.size())),
         "incorrect test_counting_iterator 'begin' and/or 'end' argument values");
 
-        auto b = tbb::counting_iterator<IntType>(begin);
+        //test that counting_iterator is default constructible
+        tbb::counting_iterator<IntType> b;
+
+        b = tbb::counting_iterator<IntType>(begin);
         auto e = tbb::counting_iterator<IntType>(end);
 
         //checks in using
@@ -126,17 +140,65 @@ struct test_counting_iterator {
     }
 };
 
+struct sort_fun{
+    template<typename T1, typename T2>
+    bool operator()(T1 a1, T2 a2) const {
+        return std::get<0>(a1) < std::get<0>(a2);
+    }
+};
+
+template <typename InputIterator>
+void test_explicit_move(InputIterator i, InputIterator j) {
+    using value_type = typename std::iterator_traits<InputIterator>::value_type;
+    value_type t(std::move(*i));
+    *i = std::move(*j);
+    *j = std::move(t);
+}
+
 struct test_zip_iterator {
     template <typename T1, typename T2>
     void operator()(std::vector<T1>& in1, std::vector<T2>& in2) {
-        auto b = tbb::make_zip_iterator(in1.begin(), in2.begin());
+        //test that zip_iterator is default constructible
+        tbb::zip_iterator<decltype(in1.begin()), decltype(in2.begin())> b;
+
+        b = tbb::make_zip_iterator(in1.begin(), in2.begin());
         auto e = tbb::make_zip_iterator(in1.end(), in2.end());
 
-        //checks in using
+        ASSERT( (b+1) != e, "size of input sequence insufficient for test" );
+
+        //simple check for-loop.
+        {
         std::for_each(b, e, [](const std::tuple<T1&, T2&>& a) { std::get<0>(a) = 1, std::get<1>(a) = 1;});
         auto res = std::all_of(b, e, [](const std::tuple<T1&, T2&>& a) {return std::get<0>(a) == 1 && std::get<1>(a) == 1;});
-        ASSERT(res, "wrong result with zip_iterator iterator");
+        ASSERT(res, "wrong result sequence assignment to (1,1) with zip_iterator iterator");
+        }
 
+        //check swapping de-referenced iterators (required by sort algorithm)
+        {
+        using std::swap;
+        auto t = std::make_tuple(T1(3), T2(2));
+        *b = t;
+        t = *(b+1);
+        ASSERT( std::get<0>(t) == 1 && std::get<1>(t) == 1, "wrong result of assignment from zip_iterator");
+        swap(*b, *(b+1));
+        ASSERT( std::get<0>(*b) == 1 && std::get<1>(*b) == 1, "wrong result swapping zip-iterator");
+        ASSERT( std::get<0>(*(b+1)) == 3 && std::get<1>(*(b+1)) == 2, "wrong result swapping zip-iterator");
+        // Test leaves sequence un-sorted.
+        }
+
+        //sort sequences by first stream.
+        {
+        // sanity check if sequence is un-sorted.
+        auto res = std::is_sorted(b, e, sort_fun());
+        ASSERT(!res, "input sequence to be sorted is already sorted! Test might lead to false positives.");
+        std::sort(tbb::make_zip_iterator(in1.begin(), in2.begin()),
+                  tbb::make_zip_iterator(in1.end(), in2.end()),
+                  sort_fun());
+        res = std::is_sorted(b, e, sort_fun());
+        ASSERT(res, "wrong result sorting sequence using zip-iterator");
+            // TODO: Add simple check: comparison with sort_fun().
+        }
+        test_explicit_move(b, b+1);
         test_random_iterator(b);
     }
 };
