@@ -24,7 +24,7 @@ class TBBConan(ConanFile):
         "os": ["Windows", "Linux"],
         "compiler": ["Visual Studio", "gcc"],
         "build_type": ["Debug", "Release"],
-        "arch": ["x86_64", "x86", "mips"]
+        "arch": ["x86_64", "x86", "mips", "armv7"]
     }
     options = {
         "dll_sign": [False, True],
@@ -91,7 +91,8 @@ class TBBConan(ConanFile):
             "arch=%s" % {
                         "x86": "ia32",
                         "x86_64": "intel64",
-                        "mips": "mips"
+                        "mips": "mips",
+                        "armv7": "arm"
                     }.get(str(self.settings.arch)),
             "tbb_root=%s" % source_folder,
             "tbb_build_dir=%s" % self.build_folder
