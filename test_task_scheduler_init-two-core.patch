@@ -1,8 +1,8 @@
 diff --git a/src/src/test/test_task_scheduler_init.cpp b/src/src/test/test_task_scheduler_init.cpp
-index e8b9e7f..8d7c43c 100644
+index 4b596dd..2c1e8c8 100644
 --- a/src/src/test/test_task_scheduler_init.cpp
 +++ b/src/src/test/test_task_scheduler_init.cpp
-@@ -289,7 +289,7 @@ namespace TestBlockingTerminateNS {
+@@ -285,7 +285,7 @@ namespace TestBlockingTerminateNS {
              }
          };
          void operator()() {

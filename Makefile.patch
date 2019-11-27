@@ -1,16 +1,16 @@
 diff --git a/src/Makefile b/src/Makefile
-index 0f7d30d..135d6e4 100644
+index 3603007..b027c49 100644
 --- a/src/Makefile
 +++ b/src/Makefile
-@@ -16,6 +16,7 @@
- #
- #
+@@ -12,6 +12,7 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
  
 +build_type?=release
  tbb_root?=.
  include $(tbb_root)/build/common.inc
  .PHONY: default all tbb tbbmalloc tbbproxy test examples
-@@ -29,32 +30,26 @@ default: tbb tbbmalloc $(if $(use_proxy),tbbproxy)
+@@ -25,32 +26,26 @@ default: tbb tbbmalloc $(if $(use_proxy),tbbproxy)
  all: tbb tbbmalloc tbbproxy test examples
  
  tbb: mkdir
@@ -51,7 +51,7 @@ index 0f7d30d..135d6e4 100644
  
  doxygen:
  	doxygen Doxyfile
-@@ -72,12 +67,12 @@ clean_examples:
+@@ -68,12 +63,12 @@ clean_examples:
  	$(shell $(MAKE) -s -i -r -C examples -f Makefile tbb_root=.. clean >$(NUL) 2>$(NUL))
  
  mkdir:

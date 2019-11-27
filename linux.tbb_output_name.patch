@@ -1,6 +1,6 @@
 --- a/src/build/linux.inc
 +++ b/src/build/linux.inc
-@@ -115,9 +115,10 @@
+@@ -111,9 +111,10 @@ endif
  TBB.LST = $(tbb_root)/src/tbb/$(def_prefix)-tbb-export.lst
  TBB.DEF = $(TBB.LST:.lst=.def)
  
