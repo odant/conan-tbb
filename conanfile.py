@@ -16,7 +16,7 @@ def get_safe(options, name):
 
 class TBBConan(ConanFile):
     name = "tbb"
-    version = "2019.5+1"
+    version = "2019.9+0"
     license = "Apache License 2.0 - https://www.threadingbuildingblocks.org/faq/10"
     description = "Intel(R) Threading Building Blocks (Intel(R) TBB) lets you easily write parallel C++ programs that take full advantage of multicore performance, that are portable, composable and have future-proof scalability."
     url = "https://github.com/odant/conan-tbb"
@@ -57,7 +57,7 @@ class TBBConan(ConanFile):
             if toolset.endswith("_xp"):
                 self.build_requires("find_sdk_winxp/[~=1.0]@%s/stable" % self.user)
         if get_safe(self.options, "dll_sign"):
-            self.build_requires("windows_signtool/[~=1.0]@%s/stable" % self.user)
+            self.build_requires("windows_signtool/[~=1.1]@%s/stable" % self.user)
 
     def source(self):
         tools.patch(patch_file="Makefile.patch")
