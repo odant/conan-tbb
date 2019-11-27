@@ -12,10 +12,6 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
 #ifndef TBB_USE_PERFORMANCE_WARNINGS
@@ -502,7 +498,7 @@ void Check( AtomicByte array[], size_t n, size_t expected_size ) {
         }
 }
 
-//! Test travering the tabel with a parallel range
+//! Test traversing the table with a parallel range
 void ParallelTraverseTable( MyTable& table, size_t n, size_t expected_size ) {
     REMARK("testing parallel traversal\n");
     ASSERT( table.size()==expected_size, NULL );
@@ -1523,33 +1519,6 @@ void TestHashCompareConstructors() {
 #if __TBB_CPP11_RVALUE_REF_PRESENT && __TBB_CPP11_VARIADIC_TEMPLATES_PRESENT && !__TBB_SCOPED_ALLOCATOR_BROKEN
 #include <scoped_allocator>
 
-template<typename Allocator>
-class allocator_aware_data {
-public:
-    static bool assert_on_constructions;
-    typedef Allocator allocator_type;
-
-    allocator_aware_data(const allocator_type& allocator = allocator_type())
-        : my_allocator(allocator), my_value(0) {}
-    allocator_aware_data(int v, const allocator_type& allocator = allocator_type())
-        : my_allocator(allocator), my_value(v) {}
-    allocator_aware_data(const allocator_aware_data&) {
-        ASSERT(!assert_on_constructions, "Allocator should propogate to the data during copy construction");
-    }
-    allocator_aware_data(allocator_aware_data&&) {
-        ASSERT(!assert_on_constructions, "Allocator should propogate to the data during move construction");
-    }
-    allocator_aware_data(const allocator_aware_data& rhs, const allocator_type& allocator)
-        : my_allocator(allocator), my_value(rhs.my_value) {}
-    allocator_aware_data(allocator_aware_data&& rhs, const allocator_type& allocator)
-        : my_allocator(allocator), my_value(rhs.my_value) {}
-
-    int value() const { return my_value; }
-private:
-    allocator_type my_allocator;
-    int my_value;
-};
-
 struct custom_hash_compare {
     template<typename Allocator>
     static size_t hash(const allocator_aware_data<Allocator>& key) {
@@ -1561,9 +1530,6 @@ struct custom_hash_compare {
         return tbb::tbb_hash_compare<int>::equal(key1.value(), key2.value());
     }
 };
-
-template<typename Allocator>
-bool allocator_aware_data<Allocator>::assert_on_constructions = false;
 
 void TestScopedAllocator() {
     typedef allocator_aware_data<std::scoped_allocator_adaptor<tbb::tbb_allocator<int>>> allocator_data_type;
@@ -1610,6 +1576,31 @@ void TestScopedAllocator() {
     map3 = map2;
 }
 #endif
+
+#if __TBB_ALLOCATOR_TRAITS_PRESENT
+void TestAllocatorTraits() {
+    using namespace propagating_allocators;
+    typedef int key;
+    typedef int mapped;
+    typedef tbb::tbb_hash_compare<key> compare;
+
+    typedef tbb::concurrent_hash_map<key, mapped, compare, always_propagating_allocator> always_propagating_map;
+    typedef tbb::concurrent_hash_map<key, mapped, compare, never_propagating_allocator> never_propagating_map;
+    typedef tbb::concurrent_hash_map<key, mapped, compare, pocma_allocator> pocma_map;
+    typedef tbb::concurrent_hash_map<key, mapped, compare, pocca_allocator> pocca_map;
+    typedef tbb::concurrent_hash_map<key, mapped, compare, pocs_allocator> pocs_map;
+
+    test_allocator_traits_support<always_propagating_map>();
+    test_allocator_traits_support<never_propagating_map>();
+    test_allocator_traits_support<pocma_map>();
+    test_allocator_traits_support<pocca_map>();
+    test_allocator_traits_support<pocs_map>();
+
+#if __TBB_CPP11_RVALUE_REF_PRESENT
+    test_allocator_traits_with_non_movable_value_type<pocma_map>();
+#endif
+}
+#endif // __TBB_ALLOCATOR_TRAITS_PRESENT
 
 //------------------------------------------------------------------------
 // Test driver
@@ -1676,6 +1667,10 @@ int TestMain () {
 #endif
 #if __TBB_CPP11_RVALUE_REF_PRESENT && __TBB_CPP11_VARIADIC_TEMPLATES_PRESENT && !__TBB_SCOPED_ALLOCATOR_BROKEN
     TestScopedAllocator();
+#endif
+
+#if __TBB_ALLOCATOR_TRAITS_PRESENT
+    TestAllocatorTraits();
 #endif
 
     return Harness::Done;

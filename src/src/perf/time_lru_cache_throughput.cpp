@@ -12,10 +12,6 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
 #include "../examples/common/utility/utility.h"
@@ -38,7 +34,7 @@
 #include <algorithm>
 #include "tbb/mutex.h"
 
-//TODO: probably move this to separate header utlity file
+//TODO: probably move this to separate header utility file
 namespace micro_benchmarking{
 namespace utils{
     template <typename type>

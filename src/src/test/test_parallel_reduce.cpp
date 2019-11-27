@@ -12,18 +12,12 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
 
 #include "tbb/parallel_reduce.h"
 #include "tbb/atomic.h"
 #include "harness_assert.h"
-
-using namespace std;
 
 static tbb::atomic<long> ForkCount;
 static tbb::atomic<long> FooBodyCount;
@@ -99,7 +93,6 @@ public:
     }
 };
 
-#include <cstdio>
 #include "harness.h"
 #include "tbb/tick_count.h"
 

@@ -12,10 +12,6 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
 #ifndef FRACTAL_VIDEO_H_
@@ -45,8 +41,6 @@ private:
         switch ( key&0xff ) {
             case esc_key:
                 running = false; break;
-            case ' ': // space
-                if( fg ) fg->switch_priorities(); break;
 
             case 'q':
                 if( fg ) fg->active_fractal_zoom_in(); break;

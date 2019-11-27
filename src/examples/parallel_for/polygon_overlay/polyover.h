@@ -12,17 +12,12 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
 /*!
  * polyover.h : extern declarations for polyover.cpp
 */
 #include "rpolygon.h"
-#include "tbb/mutex.h"
 #include "tbb/spin_mutex.h"
 
 extern void OverlayOnePolygonWithMap(Polygon_map_t *resultMap, RPolygon *myPoly, Polygon_map_t  *map2, tbb::spin_mutex *rMutex);

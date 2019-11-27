@@ -12,10 +12,6 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
 #define HARNESS_DEFAULT_MIN_THREADS 3
@@ -314,7 +310,6 @@ class tag_func {
     TT my_mult;
 public:
     tag_func(TT multiplier) : my_mult(multiplier) { }
-    void operator=( const tag_func& other){my_mult = other.my_mult;}
     // operator() will return [0 .. Count)
     tbb::flow::tag_value operator()( TT v) {
         tbb::flow::tag_value t = tbb::flow::tag_value(v / my_mult);
@@ -413,7 +408,9 @@ TestLimiterNode() {
     ASSERT(ln.decrement.my_predecessor_count == 0, "error in pred count");
     ASSERT(ln.decrement.my_initial_predecessor_count == 0, "error in initial pred count");
     ASSERT(ln.decrement.my_current_count == 0, "error in current count");
+#if TBB_DEPRECATED_LIMITER_NODE_CONSTRUCTOR
     ASSERT(ln.init_decrement_predecessors == 0, "error in decrement predecessors");
+#endif
     ASSERT(ln.my_threshold == 1, "error in my_threshold");
     tbb::flow::queue_node<int> inq(g);
     tbb::flow::queue_node<int> outq(g);
@@ -451,7 +448,9 @@ TestLimiterNode() {
     ASSERT(ln.decrement.my_predecessor_count == 0, "error in pred count");
     ASSERT(ln.decrement.my_initial_predecessor_count == 0, "error in initial pred count");
     ASSERT(ln.decrement.my_current_count == 0, "error in current count");
+#if TBB_DEPRECATED_LIMITER_NODE_CONSTRUCTOR
     ASSERT(ln.init_decrement_predecessors == 0, "error in decrement predecessors");
+#endif
     ASSERT(ln.my_threshold == 1, "error in my_threshold");
     ASSERT(ln.my_predecessors.empty(), "preds not reset(rf_clear_edges)");
     ASSERT(ln.my_successors.empty(), "preds not reset(rf_clear_edges)");

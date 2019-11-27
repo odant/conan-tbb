@@ -12,10 +12,6 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
 #ifndef _TBB_task_stream_extended_H
@@ -34,7 +30,7 @@
 #endif
 
 #if !__TBB_CPF_BUILD
-#error This code bears a preview status until it proves its usefulness/peformance suitability.
+#error This code bears a preview status until it proves its usefulness/performance suitability.
 #endif
 
 #include "tbb/tbb_stddef.h"

@@ -12,10 +12,6 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
 #ifndef _TBB_scheduler_common_H
@@ -224,6 +220,7 @@ inline void assert_task_valid( const task* task ) {
     __TBB_ASSERT( task!=NULL, NULL );
     __TBB_ASSERT( !is_poisoned(&task), NULL );
     __TBB_ASSERT( (uintptr_t)task % task_alignment == 0, "misaligned task" );
+    __TBB_ASSERT( task->prefix().ref_count >= 0, NULL);
 #if __TBB_RECYCLE_TO_ENQUEUE
     __TBB_ASSERT( (unsigned)task->state()<=(unsigned)task::to_enqueue, "corrupt task (invalid state)" );
 #else
@@ -344,6 +341,11 @@ struct arena_slot_line1 {
     //! Index of the first ready task in the deque.
     /** Modified by thieves, and by the owner during compaction/reallocation **/
     __TBB_atomic size_t head;
+
+#if __TBB_PREVIEW_RESUMABLE_TASKS
+    //! The flag is raised when the original owner of the scheduler should return to this scheduler (for resume).
+    tbb::atomic<bool>* my_scheduler_is_recalled;
+#endif
 };
 
 struct arena_slot_line2 {
@@ -363,7 +365,7 @@ struct arena_slot_line2 {
     //! Capacity of the primary task pool (number of elements - pointers to task).
     size_t my_task_pool_size;
 
-    // Task pool of the scheduler that owns this slot
+    //! Task pool of the scheduler that owns this slot
     task* *__TBB_atomic task_pool_ptr;
 
 #if __TBB_STATISTICS

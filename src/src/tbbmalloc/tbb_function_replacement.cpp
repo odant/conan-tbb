@@ -12,10 +12,6 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
 #include "tbb/tbb_config.h"
@@ -61,7 +57,7 @@ namespace Log {
     static char *records[RECORDS_COUNT + 1];
     static bool replacement_status = true;
 
-    // Internal counter, thats contain number of next string for record
+    // Internal counter that contains number of next string for record
     static unsigned record_number = 0;
 
     // Function that writes info about (not)found opcodes to the Log journal

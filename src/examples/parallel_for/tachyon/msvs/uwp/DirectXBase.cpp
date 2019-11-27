@@ -12,10 +12,6 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
 #include "pch.h"
@@ -186,7 +182,7 @@ void DirectXBase::SetDpi(float dpi)
 void DirectXBase::UpdateForWindowSizeChange()
 {
     // Only handle window size changed if there is no pending DPI change.
-    if (m_dpi != DisplayProperties::LogicalDpi)
+    if (m_dpi != DisplayInformation::GetForCurrentView()->LogicalDpi)
         return;
 
     if (m_window->Bounds.Width  != m_windowBounds.Width ||

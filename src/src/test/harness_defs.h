@@ -12,10 +12,6 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
 #ifndef __TBB_harness_defs_H
@@ -204,6 +200,9 @@
     #endif
     #ifndef TBB_PREVIEW_ALGORITHM_TRACE
         #define TBB_PREVIEW_ALGORITHM_TRACE 1
+    #endif
+    #ifndef TBB_DEPRECATED_LIMITER_NODE_CONSTRUCTOR
+        #define TBB_DEPRECATED_LIMITER_NODE_CONSTRUCTOR 1
     #endif
 #endif
 

@@ -12,18 +12,21 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
-#pragma once
+#ifndef GET_DEFAULT_NUM_THREADS_H_
+#define GET_DEFAULT_NUM_THREADS_H_
 
-#include <wrl/client.h>
-#include <d3d11_1.h>
-#include <d2d1_1.h>
-#include <d2d1effects.h>
-#include <dwrite_1.h>
-#include <wincodec.h>
-#include "App.xaml.h"
+#include "tbb/global_control.h"
+
+namespace utility {
+    inline int get_default_num_threads() {
+        #if __TBB_MIC_OFFLOAD
+            #pragma offload target(mic) out(default_num_threads)
+        #endif // __TBB_MIC_OFFLOAD
+        static size_t default_num_threads = tbb::global_control::active_value(tbb::global_control::max_allowed_parallelism);
+        return static_cast<int>(default_num_threads);
+    }
+}
+
+#endif /* GET_DEFAULT_NUM_THREADS_H_ */

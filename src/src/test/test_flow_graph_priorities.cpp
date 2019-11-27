@@ -12,10 +12,6 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
 #include "harness_defs.h"
@@ -110,7 +106,7 @@ void test_node( NodeTypeCreator node_creator_func, NodePortRetriever get_sender 
     graph g;
     broadcast_node<int> bn(g);
     function_node<int> tn(g, unlimited, passthru_body());
-    // Using pointers to nodes to avoid errors on compilers, which try to generate assigment
+    // Using pointers to nodes to avoid errors on compilers, which try to generate assignment
     // operator for the nodes
     std::vector<NodeType*> nodes;
     for( unsigned i = 0; i < node_num; ++i ) {
@@ -304,9 +300,9 @@ void test( int num_threads ) {
     SpinBarrier barrier(cpu_threads + /*async thread=*/1);
     g_task_num = 0;
     g_async_task_ids.clear();
-    g_async_task_ids.reserve( async_subgraph_reruns );
+    g_async_task_ids.reserve(async_subgraph_reruns);
 
-    tbb::task_scheduler_init init( cpu_threads );
+    tbb::task_scheduler_init init(cpu_threads);
     AsyncActivity activity(barrier);
     graph g;
 
@@ -431,7 +427,7 @@ void do_nested_work<PRIORITIZED_WORK>( const tbb::tbb_thread::id& tid,
     }
 }
 
-// Using pointers to nodes to avoid errors on compilers, which try to generate assigment operator
+// Using pointers to nodes to avoid errors on compilers, which try to generate assignment operator
 // for the nodes
 typedef std::vector< continue_node<continue_msg>* > nodes_container_t;
 
@@ -489,7 +485,7 @@ using tbb::task_arena;
 struct ResetGraphFunctor {
     graph& my_graph;
     ResetGraphFunctor(graph& g) : my_graph(g) {}
-    // copy construtor to please some old compilers
+    // copy constructor to please some old compilers
     ResetGraphFunctor(const ResetGraphFunctor& rgf) : my_graph(rgf.my_graph) {}
     void operator()() const { my_graph.reset(); }
 };
@@ -505,7 +501,7 @@ struct OuterBody {
     task_arena& my_inner_arena;
     OuterBody( int max_threads, task_arena& inner_arena )
         : my_max_threads(max_threads), my_inner_arena(inner_arena) {}
-    // copy construtor to please some old compilers
+    // copy constructor to please some old compilers
     OuterBody( const OuterBody& rhs )
         : my_max_threads(rhs.my_max_threads), my_inner_arena(rhs.my_inner_arena) {}
     int operator()( const int& ) {
@@ -591,6 +587,7 @@ int TestMain() {
     }
     for( int p = MinThread; p <= MaxThread; ++p ) {
         PriorityNodesTakePrecedence::test( p );
+        ThreadsEagerReaction::test( p );
         LimitingExecutionToPriorityTask::test( p );
     }
     NestedCase::test( MaxThread );

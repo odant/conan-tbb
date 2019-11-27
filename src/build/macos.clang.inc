@@ -11,10 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-#
-#
-#
 
 CPLUS ?= clang++
 CONLY ?= clang
@@ -45,6 +41,11 @@ else
 endif
 
 CPLUS_FLAGS += -DUSE_PTHREAD $(ITT_NOTIFY)
+
+ifeq (1,$(tbb_cpf))
+# For correct ucontext.h structures layout
+CPLUS_FLAGS += -D_XOPEN_SOURCE
+endif
 
 # For Clang, we add the option to support RTM intrinsics *iff* xtest is found in <immintrin.h>
 ifneq (,$(shell grep xtest `echo "\#include<immintrin.h>" | $(CONLY) -E -M - 2>&1 | grep immintrin.h` 2>/dev/null))

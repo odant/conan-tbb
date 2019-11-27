@@ -12,30 +12,21 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
+#include "../tbb_config.h"
 
-#pragma once
+#if __TBB_SUPPRESS_INTERNAL_DEPRECATED_MESSAGES
 
-#include "App.g.h"
-#include "DirectXPage.xaml.h"
+#if _MSC_VER || __INTEL_COMPILER
+#pragma warning( push )
+#pragma warning( disable: 4996 )
+#elif __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#elif __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
 
-namespace tbbTachyon
-{
-    /// <summary>
-    /// Provides application-specific behavior to supplement the default Application class.
-    /// </summary>
-    ref class App sealed
-    {
-    public:
-        App();
-        virtual void OnLaunched(Windows::ApplicationModel::Activation::LaunchActivatedEventArgs^ pArgs) override;
-
-    private:
-        DirectXPage^ m_directXPage;
-    };
-}
+#endif  // __TBB_SUPPRESS_INTERNAL_DEPRECATED_MESSAGES

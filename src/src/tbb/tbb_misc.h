@@ -12,10 +12,6 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
 #ifndef _TBB_tbb_misc_H
@@ -66,6 +62,8 @@ inline int AvailableHwConcurrency() {
 }
 #endif /* __TBB_HardwareConcurrency */
 
+//! Returns OS regular memory page size
+size_t DefaultSystemPageSize();
 
 #if _WIN32||_WIN64
 

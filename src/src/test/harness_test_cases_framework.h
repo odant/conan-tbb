@@ -12,10 +12,6 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
 #ifndef tbb_harness_test_cases_framework_H
@@ -160,7 +156,7 @@ namespace test_framework_unit_tests{
                 test_suite ts;
                 ts.register_test_case("tc_name",&do_nothing_tc);
                 bool silent =true;
-                ASSERT(!ts(!silent).empty(),"in verbose mode all messages should be outputed");
+                ASSERT(!ts(!silent).empty(),"in verbose mode all messages should be outputted");
             }
         };
     }

@@ -12,10 +12,6 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
 #define HARNESS_DEFAULT_MIN_THREADS 2
@@ -308,7 +304,6 @@ class tag_func {
     TT my_mult;
 public:
     tag_func(TT multiplier) : my_mult(multiplier) { }
-    void operator=( const tag_func& other){my_mult = other.my_mult;}
     // operator() will return [0 .. Count)
     tbb::flow::tag_value operator()( TT v) {
         tbb::flow::tag_value t = tbb::flow::tag_value(v / my_mult);

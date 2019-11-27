@@ -11,10 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-#
-#
-#
 
 CPLUS ?= icpc
 CONLY ?= icc
@@ -53,13 +49,18 @@ endif
 
 ifeq ($(cfg), release)
     SDL_FLAGS += -D_FORTIFY_SOURCE=2
-    CPLUS_FLAGS = -g -O2 -fno-omit-frame-pointer
+    CPLUS_FLAGS = -g -O2 -fno-omit-frame-pointer -qno-opt-report-embed
 else
     CPLUS_FLAGS = -g -O0 -DTBB_USE_DEBUG
 endif
 
 ITT_NOTIFY = -DDO_ITT_NOTIFY
 CPLUS_FLAGS += -DUSE_PTHREAD $(ITT_NOTIFY)
+
+ifeq (1,$(tbb_cpf))
+# For correct ucontext.h structures layout
+CPLUS_FLAGS += -D_XOPEN_SOURCE
+endif
 
 ifneq (,$(codecov))
     CPLUS_FLAGS += -prof-gen=srcpos

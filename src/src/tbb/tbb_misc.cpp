@@ -12,10 +12,6 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
 // Source file for miscellaneous entities that are infrequently referenced by
@@ -35,6 +31,10 @@
 
 #if _WIN32||_WIN64
 #include "tbb/machine/windows_api.h"
+#endif
+
+#if !_WIN32
+#include <unistd.h> // sysconf(_SC_PAGESIZE)
 #endif
 
 #define __TBB_STD_RETHROW_EXCEPTION_POSSIBLY_BROKEN                             \
@@ -67,6 +67,15 @@ namespace internal {
     #define DO_THROW(exc, init_args) PRINT_ERROR_AND_ABORT(#exc, #init_args)
 #endif /* !TBB_USE_EXCEPTIONS */
 
+size_t DefaultSystemPageSize() {
+#if _WIN32
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    return si.dwPageSize;
+#else
+    return sysconf(_SC_PAGESIZE);
+#endif
+}
 
 /* The "what" should be fairly short, not more than about 128 characters.
    Because we control all the call sites to handle_perror, it is pointless

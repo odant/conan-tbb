@@ -12,10 +12,6 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
 #define NOMINMAX
@@ -488,11 +484,6 @@ class BarIterator
     Bar* bar_ptr;
     BarIterator(Bar* bp_) : bar_ptr(bp_) {}
 public:
-    ~BarIterator() {}
-    BarIterator& operator=( const BarIterator& other ) {
-        bar_ptr = other.bar_ptr;
-        return *this;
-    }
     Bar& operator*() const {
         return *bar_ptr;
     }

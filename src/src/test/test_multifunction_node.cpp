@@ -12,21 +12,19 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
 #if __TBB_CPF_BUILD
 #define TBB_DEPRECATED_FLOW_NODE_EXTRACTION 1
 #endif
 
+#include "harness.h"
 #include "harness_graph.h"
 
 #include "tbb/flow_graph.h"
 #include "tbb/task_scheduler_init.h"
 #include "tbb/spin_rw_mutex.h"
+#include "test_follows_and_precedes_api.h"
 
 #if TBB_USE_DEBUG
 #define N 16
@@ -36,7 +34,7 @@
 #define MAX_NODES 4
 
 //! Performs test on function nodes with limited concurrency and buffering
-/** Theses tests check:
+/** These tests check:
     1) that the number of executing copies never exceed the concurrency limit
     2) that the node never rejects
     3) that no items are lost
@@ -244,7 +242,7 @@ void run_buffered_levels( int c ) {
 
 
 //! Performs test on executable nodes with limited concurrency
-/** Theses tests check:
+/** These tests check:
     1) that the nodes will accepts puts up to the concurrency limit,
     2) the nodes do not exceed the concurrency limit even when run with more threads (this is checked in the harness_graph_executor),
     3) the nodes will receive puts from multiple successors simultaneously,
@@ -687,6 +685,52 @@ void test_extract() {
 }
 #endif
 
+#if __TBB_PREVIEW_FLOW_GRAPH_NODE_SET
+#include <array>
+#include <vector>
+
+void test_precedes() {
+    using namespace tbb::flow;
+
+    using multinode = multifunction_node<int, std::tuple<int, int>>;
+
+    graph g;
+
+    buffer_node<int> b1(g);
+    buffer_node<int> b2(g);
+
+    multinode node(precedes(b1, b2), unlimited, [](const int& i, multinode::output_ports_type& op) -> void {
+            if (i % 2)
+                std::get<0>(op).try_put(i);
+            else
+                std::get<1>(op).try_put(i);
+        }
+    );
+
+    node.try_put(0);
+    node.try_put(1);
+    g.wait_for_all();
+
+    int storage;
+    ASSERT((b1.try_get(storage) && !b1.try_get(storage) && b2.try_get(storage) && !b2.try_get(storage)),
+            "Not exact edge quantity was made");
+}
+
+void test_follows_and_precedes_api() {
+    using multinode = tbb::flow::multifunction_node<int, std::tuple<int, int, int>>;
+
+    std::array<int, 3> messages_for_follows = {0, 1, 2};
+
+    follows_and_precedes_testing::test_follows
+        <int, tbb::flow::multifunction_node<int, std::tuple<int, int, int>>>
+        (messages_for_follows, tbb::flow::unlimited, [](const int& i, multinode::output_ports_type& op) -> void {
+            std::get<0>(op).try_put(i);
+        });
+
+    test_precedes();
+}
+#endif // __TBB_PREVIEW_FLOW_GRAPH_NODE_SET
+
 int TestMain() {
     if( MinThread<1 ) {
         REPORT("number of threads must be positive\n");
@@ -701,6 +745,9 @@ int TestMain() {
 #if TBB_DEPRECATED_FLOW_NODE_EXTRACTION
     test_extract<tbb::flow::rejecting>();
     test_extract<tbb::flow::queueing>();
+#endif
+#if __TBB_PREVIEW_FLOW_GRAPH_NODE_SET
+    test_follows_and_precedes_api();
 #endif
    return Harness::Done;
 }

@@ -12,10 +12,6 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
 /*
@@ -66,6 +62,8 @@
 
     The parameters are chosen so that CPU and ASYNC work take approximately the same time.
 */
+
+#define TBB_PREVIEW_FLOW_GRAPH_FEATURES __TBB_CPF_BUILD
 
 #include "tbb/task_scheduler_init.h"
 #include "tbb/parallel_for.h"

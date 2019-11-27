@@ -12,10 +12,6 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
 #include "tbb/tbb_config.h"
@@ -41,6 +37,7 @@ static const char _pad[NFS_MaxLineSize - sizeof(int)] = {};
 // governor data
 basic_tls<uintptr_t> governor::theTLS;
 unsigned governor::DefaultNumberOfThreads;
+size_t governor::DefaultPageSize;
 rml::tbb_factory governor::theRMLServerFactory;
 bool governor::UsePrivateRML;
 bool governor::is_speculation_enabled;
@@ -75,7 +72,7 @@ bool __TBB_InitOnce::InitializationDone;
 // generic_scheduler data
 
 //! Pointer to the scheduler factory function
-generic_scheduler* (*AllocateSchedulerPtr)( market& );
+generic_scheduler* (*AllocateSchedulerPtr)( market&, bool );
 
 #if __TBB_OLD_PRIMES_RNG
 //! Table of primes used by fast random-number generator (FastRandom).
@@ -233,6 +230,8 @@ void DoOneTimeInitializations() {
         Scheduler_OneTimeInitialization( itt_present );
         // Force processor groups support detection
         governor::default_num_threads();
+        // Force OS regular page size detection
+        governor::default_page_size();
         // Dump version data
         governor::print_version_info();
         PrintExtraVersionInfo( "Tools support", itt_present ? "enabled" : "disabled" );
@@ -341,6 +340,21 @@ void itt_metadata_str_add_v7( itt_domain_enum domain, void *addr, unsigned long 
     }
 }
 
+void itt_metadata_ptr_add_v11( itt_domain_enum domain, void *addr, unsigned long long addr_extra,
+                              string_index key, void *value ) {
+    if ( __itt_domain *d = get_itt_domain( domain ) ) {
+        __itt_id id = itt_null_id;
+        itt_id_make( &id, addr, addr_extra );
+        __itt_string_handle *k = ITT_get_string_handle(key);
+#if __TBB_x86_32
+        ITTNOTIFY_VOID_D5(metadata_add, d, id, k, __itt_metadata_u32, 1, value);
+#else
+        ITTNOTIFY_VOID_D5(metadata_add, d, id, k, __itt_metadata_u64, 1, value);
+#endif 
+    }
+}
+
+
 void itt_relation_add_v7( itt_domain_enum domain, void *addr0, unsigned long long addr0_extra,
                           itt_relation relation, void *addr1, unsigned long long addr1_extra ) {
     if ( __itt_domain *d = get_itt_domain( domain ) ) {
@@ -405,6 +419,9 @@ void itt_metadata_str_add_v7( itt_domain_enum /*domain*/, void* /*addr*/, unsign
 
 void itt_relation_add_v7( itt_domain_enum /*domain*/, void* /*addr0*/, unsigned long long /*addr0_extra*/,
                           itt_relation /*relation*/, void* /*addr1*/, unsigned long long /*addr1_extra*/ ) { }
+
+void itt_metadata_ptr_add_v11( itt_domain_enum /*domain*/, void * /*addr*/, unsigned long long /*addr_extra*/,
+                              string_index /*key*/, void * /*value*/ ) {}
 
 void itt_task_begin_v7( itt_domain_enum /*domain*/, void* /*task*/, unsigned long long /*task_extra*/,
                         void* /*parent*/, unsigned long long /*parent_extra*/, string_index /*name_index*/ ) { }

@@ -12,10 +12,6 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
-
-
-
 */
 
 /*
@@ -48,7 +44,7 @@
 */
 
 /*
- * apitrigeom.cpp - This file contains code for generating triangle tesselated
+ * apitrigeom.cpp - This file contains code for generating triangle tessellated
  *                geometry, for use with OpenGL, XGL, etc.
  */
 
