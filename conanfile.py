@@ -70,10 +70,6 @@ class TBBConan(ConanFile):
     def build(self):
         output_name = "tbb"
         if self.settings.os == "Windows":
-            output_name += {
-                            "x86": "",
-                            "x86_64": "64"
-                        }.get(str(self.settings.arch))
             if self.settings.build_type == "Debug":
                 output_name += "d"
         #
