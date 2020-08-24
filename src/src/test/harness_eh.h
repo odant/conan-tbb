@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2019 Intel Corporation
+    Copyright (c) 2005-2020 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ tbb::atomic<intptr_t> g_ActualCurrentThreads;
 
 volatile bool g_ThrowException = true,
          // g_Flog is true for nested construct tests with catches (exceptions are not allowed to
-         // propagate to the tbb construct itself.)
+         // propagate to the TBB construct itself.)
               g_Flog = false,
               g_MasterExecuted = false,
               g_NonMasterExecuted = false;

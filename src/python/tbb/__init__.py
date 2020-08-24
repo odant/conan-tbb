@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2016-2019 Intel Corporation
+# Copyright (c) 2016-2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ from .pool import __all__ as pool__all
 __all__ = ["Monkey", "is_active"] + api__all + pool__all
 
 __doc__ = """
-Python API for Intel(R) Threading Building Blocks library (Intel(R) TBB)
+Python API for Intel(R) Threading Building Blocks (Intel(R) TBB)
 extended with standard Python's pools implementation and monkey-patching.
 
 Command-line interface example:

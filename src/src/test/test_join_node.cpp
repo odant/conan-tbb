@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2019 Intel Corporation
+    Copyright (c) 2005-2020 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ public:
             // this is the tag-matching join we're testing
             JType * my_join = makeJoin<N, JType, tbb::flow::tag_matching>::create(g);
             // source_node for continue messages
-            tbb::flow::source_node<tbb::flow::continue_msg> snode(g, recirc_source_node_body(), false);
+            tbb::flow::input_node<tbb::flow::continue_msg> snode(g, recirc_source_node_body());
             // reserving join that matches recirculating tags with continue messages.
             input_join_type * my_input_join = makeJoin<2, input_join_type, tbb::flow::reserving>::create(g);
             // tbb::flow::make_edge(snode, tbb::flow::input_port<1>(*my_input_join));
@@ -121,7 +121,7 @@ void test_follows_and_precedes_api() {
     using msg_t = tbb::flow::continue_msg;
     using JoinOutputType = tbb::flow::tuple<msg_t, msg_t, msg_t>;
 
-    std::array<msg_t, 3> messages_for_follows = {msg_t(), msg_t(), msg_t()};
+    std::array<msg_t, 3> messages_for_follows = { {msg_t(), msg_t(), msg_t()} };
     std::vector<msg_t> messages_for_precedes = {msg_t(), msg_t(), msg_t()};
 
     follows_and_precedes_testing::test_follows
@@ -187,5 +187,6 @@ int TestMain() {
     test_main<tbb::flow::queueing>();
     test_main<tbb::flow::reserving>();
     test_main<tbb::flow::tag_matching>();
+    generate_recirc_test<tbb::flow::tuple<int,float> >::do_test();
     return Harness::Done;
 }

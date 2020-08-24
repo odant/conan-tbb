@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2019 Intel Corporation
+    Copyright (c) 2005-2020 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -60,10 +60,10 @@ public:
        Note: conversion between a coin and a thread does not affect the accounting.
      */
 #if _WIN32||_WIN64
-    //! Inform server of a tbb master thread.
+    //! Inform server of a TBB master thread.
     virtual void register_master( execution_resource_t& /*v*/ ) = 0;
 
-    //! Inform server that the tbb master thread is done with its work.
+    //! Inform server that the TBB master thread is done with its work.
     virtual void unregister_master( execution_resource_t /*v*/ ) = 0;
  
     //! deactivate

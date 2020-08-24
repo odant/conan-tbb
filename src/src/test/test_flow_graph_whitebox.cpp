@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2019 Intel Corporation
+    Copyright (c) 2005-2020 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@
         #pragma warning (disable: 4702)
     #endif
 #endif
+
+#define TBB_DEPRECATED_INPUT_NODE_BODY __TBB_CPF_BUILD
 
 #include "harness.h"
 #include <string> // merely prevents LNK2001 error to happen (on ICL+VC9 configurations)
@@ -633,18 +635,28 @@ struct snode_body {
     int max_cnt;
     int my_cnt;
     snode_body( const int &in) : max_cnt(in) { my_cnt = 0; }
+#if TBB_DEPRECATED_INPUT_NODE_BODY
     bool operator()(int &out) {
         if(max_cnt <= my_cnt++) return false;
         out = my_cnt;
         return true;
     }
+#else
+    int operator()(tbb::flow_control &fc) {
+        if(max_cnt <= my_cnt++) {
+            fc.stop();
+            return int();
+        }
+        return my_cnt;
+    }
+#endif
 };
 
 void
 TestSourceNode() {
     tbb::flow::graph g;
-    tbb::flow::source_node<int> sn(g, snode_body(4), false);
-    REMARK("Testing source_node:");
+    tbb::flow::input_node<int> sn(g, snode_body(4));
+    REMARK("Testing input_node:");
     tbb::flow::queue_node<int> qin(g);
     tbb::flow::join_node<tbb::flow::tuple<int,int>, tbb::flow::reserving> jn(g);
     tbb::flow::queue_node<tbb::flow::tuple<int,int> > qout(g);
@@ -672,8 +684,8 @@ TestSourceNode() {
 
     g.wait_for_all();
     g.reset();
-    ASSERT(!sn.my_successors.empty(), "source_node has no successors after reset");
-    ASSERT(tbb::flow::input_port<0>(jn).my_predecessors.empty(), "successor if source_node has pred after reset.");
+    ASSERT(!sn.my_successors.empty(), "input_node has no successors after reset");
+    ASSERT(tbb::flow::input_port<0>(jn).my_predecessors.empty(), "successor of input_node has pred after reset.");
     REMARK(" done\n");
 }
 

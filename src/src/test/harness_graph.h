@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2019 Intel Corporation
+    Copyright (c) 2005-2020 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -1204,7 +1204,7 @@ void test_limited_lightweight_execution(unsigned N, unsigned concurrency) {
     tbb::flow::graph g;
     NodeType node(g, concurrency, limited_lightweight_checker_body());
     // Execute first body as lightweight, then wait for all other threads to fill internal buffer.
-    // Then unblock the lightweightd thread and check if other body executions are inside tbb task.
+    // Then unblock the lightweightd thread and check if other body executions are inside TBB task.
     Harness::SpinBarrier barrier(N - concurrency);
     NativeParallelFor(N, native_loop_limited_body<NodeType>(node, barrier));
     g.wait_for_all();
@@ -1226,7 +1226,11 @@ void test_lightweight(unsigned N) {
 template<template<typename, typename, typename, typename> class NodeType>
 void test(unsigned N) {
     typedef tbb::tbb_thread::id input_type;
+#if TBB_DEPRECATED_FLOW_NODE_ALLOCATOR
     typedef tbb::cache_aligned_allocator<input_type> allocator_type;
+#else
+    typedef tbb::flow::interface11::null_type allocator_type;
+#endif
     typedef NodeType<input_type, output_tuple_type, tbb::flow::queueing_lightweight, allocator_type> node_type;
     test_lightweight<node_type>(N);
 }

@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2019 Intel Corporation
+    Copyright (c) 2005-2020 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -25,6 +25,8 @@
 #pragma warning( disable: 4503 )
 #endif
 #endif
+
+#define TBB_DEPRECATED_INPUT_NODE_BODY __TBB_CPF_BUILD
 
 #include "harness.h"
 #include "harness_graph.h"
@@ -698,7 +700,6 @@ struct threebyte {
         b2 = (unsigned char)((i>>8)&0xFF);
         b3 = (unsigned char)((i>>16)&0xFF);
     }
-    threebyte(const threebyte &other): b1(other.b1), b2(other.b2), b3(other.b3) { }
     operator int() const { return (int)(b1+(b2<<8)+(b3<<16)); }
 };
 
@@ -836,11 +837,20 @@ static int input_count;  // source_nodes are serial
 // emit input_count continue_msg
 class recirc_source_node_body {
 public:
+#if TBB_DEPRECATED_INPUT_NODE_BODY
     bool operator()(tbb::flow::continue_msg &v) {
         --input_count;
         v = tbb::flow::continue_msg();
         return 0<=input_count;
     }
+#else
+    tbb::flow::continue_msg operator()(tbb::flow_control &fc) {
+        if( --input_count < 0 ){
+            fc.stop();
+        }
+        return tbb::flow::continue_msg();
+    }
+#endif
 };
 
 // T must be arithmetic, and shouldn't wrap around for reasonable sizes of Count (which is now 150, and maxPorts is 10,
@@ -855,13 +865,26 @@ class source_body {
     int addend;
 public:
     source_body(int init_val, int addto): my_count(init_val), addend(addto) { }
-    void operator=(const source_body& other) { my_count = other.my_count; addend = other.addend; }
+#if TBB_DEPRECATED_INPUT_NODE_BODY
     bool operator()(TT &v) {
         int lc = my_count;
         v = make_thingie<TT, INDEX>()(my_count);
         my_count += addend;
         return lc < Count;
     }
+#else
+    TT operator()(tbb::flow_control& fc) {
+        int lc = my_count;
+        TT ret = make_thingie<TT, INDEX>()(my_count);
+        my_count += addend;
+        if ( lc < Count){
+            return ret;
+        }else{
+            fc.stop();
+            return TT();
+        }
+    }
+#endif
 };
 
 template<typename TT>
@@ -869,7 +892,6 @@ class tag_func {
     TT my_mult;
 public:
     tag_func(TT multiplier): my_mult(multiplier) { }
-    void operator=(const tag_func& other) { my_mult = other.my_mult; }
     // operator() will return [0 .. Count)
     tbb::flow::tag_value operator()(TT v) {
         tbb::flow::tag_value t = tbb::flow::tag_value(v/my_mult);
@@ -1362,7 +1384,7 @@ public:
     typedef tbb::flow::join_node<tbb::flow::tuple<int, tbb::flow::continue_msg>, tbb::flow::reserving> input_join_type;
     typedef typename join_node_type::output_type TT;
     typedef typename tbb::flow::tuple_element<ELEM-1, TT>::type IT;
-    typedef typename tbb::flow::source_node<IT> my_source_node_type;
+    typedef typename tbb::flow::input_node<IT> my_source_node_type;
     typedef typename tbb::flow::function_node<tbb::flow::tuple<int, tbb::flow::continue_msg>, IT> my_recirc_function_type;
     static void print_remark(const char * str) {
         source_node_helper<ELEM-1, JNT>::print_remark(str);
@@ -1373,6 +1395,7 @@ public:
             my_source_node_type *new_node = new my_source_node_type(g, source_body<IT, ELEM>(i, nInputs));
             tbb::flow::make_edge(*new_node, tbb::flow::input_port<ELEM-1>(my_join));
             all_source_nodes[ELEM-1][i] = (void *)new_node;
+            new_node->activate();
         }
         // add the next source_node
         source_node_helper<ELEM-1, JNT>::add_source_nodes(my_join, g, nInputs);
@@ -1426,7 +1449,7 @@ class source_node_helper<1, JNT> {
     typedef tbb::flow::join_node<tbb::flow::tuple<int, tbb::flow::continue_msg>, tbb::flow::reserving> input_join_type;
     typedef typename join_node_type::output_type TT;
     typedef typename tbb::flow::tuple_element<0, TT>::type IT;
-    typedef typename tbb::flow::source_node<IT> my_source_node_type;
+    typedef typename tbb::flow::input_node<IT> my_source_node_type;
     typedef typename tbb::flow::function_node<tbb::flow::tuple<int, tbb::flow::continue_msg>, IT> my_recirc_function_type;
 public:
     static void print_remark(const char * str) {
@@ -1437,6 +1460,7 @@ public:
             my_source_node_type *new_node = new my_source_node_type(g, source_body<IT, 1>(i, nInputs));
             tbb::flow::make_edge(*new_node, tbb::flow::input_port<0>(my_join));
             all_source_nodes[0][i] = (void *)new_node;
+            new_node->activate();
         }
     }
 

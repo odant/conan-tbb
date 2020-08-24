@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2019 Intel Corporation
+    Copyright (c) 2005-2020 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -13,6 +13,9 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 */
+
+#define TBB_DEPRECATED_FLOW_NODE_ALLOCATOR __TBB_CPF_BUILD
+#define TBB_DEPRECATED_INPUT_NODE_BODY __TBB_CPF_BUILD
 
 #include "harness.h"
 #include "harness_graph.h"
@@ -98,12 +101,25 @@ class source_body {
     int addend;
 public:
     source_body(int init_val, int addto) : my_count(init_val), addend(addto) { }
+#if TBB_DEPRECATED_INPUT_NODE_BODY
     bool operator()( TT &v) {
         if(my_count >= Count) return false;
         tuple_helper<N>::set_element(v, my_count);
         my_count += addend;
         return true;
     }
+#else
+    TT operator()( tbb::flow_control &fc) {
+        if(my_count >= Count){
+            fc.stop();
+            return TT();
+        }
+        TT v;
+        tuple_helper<N>::set_element(v, my_count);
+        my_count += addend;
+        return v;
+    }
+#endif
 };
 
 // allocator for split_node.
@@ -207,7 +223,7 @@ template<typename SType>
 class parallel_test {
 public:
     typedef typename SType::input_type TType;
-    typedef tbb::flow::source_node<TType> source_type;
+    typedef tbb::flow::input_node<TType> source_type;
     static const int N = tbb::flow::tuple_size<TType>::value;
     static void test() {
         source_type* all_source_nodes[MaxNSources];
@@ -231,6 +247,7 @@ public:
                 source_type *s = new source_type(g, source_body<TType>(i, nInputs) );
                 tbb::flow::make_edge(*s, *my_split);
                 all_source_nodes[i] = s;
+                s->activate();
             }
 
             g.wait_for_all();
@@ -305,7 +322,7 @@ void test_follow_and_precedes_api() {
     make_edge(f2, preceding_node);
     make_edge(f3, preceding_node);
 
-    msg_t msg(1, 2.2, 3.3);
+    msg_t msg(1, 2.2f, 3.3);
     f1.try_put(msg);
     f2.try_put(msg);
     f3.try_put(msg);
@@ -381,6 +398,13 @@ void test_deduction_guides() {
 
 #endif
 
+#if TBB_DEPRECATED_FLOW_NODE_ALLOCATOR
+void test_node_allocator() {
+    tbb::flow::graph g;
+    tbb::flow::split_node< tbb::flow::tuple<int,int>, std::allocator<int> > tmp(g);
+}
+#endif
+
 int TestMain() {
 #if __TBB_USE_TBB_TUPLE
     REMARK("  Using TBB tuple\n");
@@ -420,6 +444,9 @@ int TestMain() {
 #endif
 #if __TBB_CPP17_DEDUCTION_GUIDES_PRESENT
     test_deduction_guides();
+#endif
+#if TBB_DEPRECATED_FLOW_NODE_ALLOCATOR
+    test_node_allocator();
 #endif
     return Harness::Done;
 }

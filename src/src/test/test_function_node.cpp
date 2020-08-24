@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2019 Intel Corporation
+    Copyright (c) 2005-2020 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -14,9 +14,8 @@
     limitations under the License.
 */
 
-#if __TBB_CPF_BUILD
-#define TBB_DEPRECATED_FLOW_NODE_EXTRACTION 1
-#endif
+#define TBB_DEPRECATED_FLOW_NODE_EXTRACTION __TBB_CPF_BUILD
+#define TBB_DEPRECATED_FLOW_NODE_ALLOCATOR __TBB_CPF_BUILD
 
 #include "harness.h"
 #include "harness_graph.h"
@@ -585,7 +584,7 @@ void test_extract() {
 void test_follows_and_precedes_api() {
     using msg_t = tbb::flow::continue_msg;
 
-    std::array<msg_t, 3> messages_for_follows = { msg_t(), msg_t(), msg_t() };
+    std::array<msg_t, 3> messages_for_follows = { {msg_t(), msg_t(), msg_t()} };
     std::vector<msg_t> messages_for_precedes = { msg_t() };
 
     pass_through<msg_t> pass_msg;
@@ -650,6 +649,15 @@ void test_deduction_guides() {
 
 #endif
 
+#if TBB_DEPRECATED_FLOW_NODE_ALLOCATOR
+void test_node_allocator(){
+    tbb::flow::graph g;
+    tbb::flow::function_node< int, int, tbb::flow::queueing, std::allocator<int> > tmp(
+        g, tbb::flow::unlimited, pass_through<int>()
+    );
+}
+#endif
+
 int TestMain() {
     if( MinThread<1 ) {
         REPORT("number of threads must be positive\n");
@@ -659,15 +667,18 @@ int TestMain() {
        test_concurrency(p);
    }
    lightweight_testing::test<tbb::flow::function_node>(10);
-#if TBB_DEPRECATED_FLOW_NODE_EXTRACTION
-    test_extract<tbb::flow::rejecting>();
-    test_extract<tbb::flow::queueing>();
-#endif
 #if __TBB_PREVIEW_FLOW_GRAPH_NODE_SET
     test_follows_and_precedes_api();
 #endif
 #if __TBB_CPP17_DEDUCTION_GUIDES_PRESENT
     test_deduction_guides();
+#endif
+#if TBB_DEPRECATED_FLOW_NODE_EXTRACTION
+    test_extract<tbb::flow::rejecting>();
+    test_extract<tbb::flow::queueing>();
+#endif
+#if TBB_DEPRECATED_FLOW_NODE_ALLOCATOR
+    test_node_allocator();
 #endif
    return Harness::Done;
 }

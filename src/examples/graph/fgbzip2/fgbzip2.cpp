@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2019 Intel Corporation
+    Copyright (c) 2005-2020 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -378,7 +378,7 @@ void fgCompressionAsyncMsg(IOOperations& io, int blockSizeIn100KB, size_t memory
 void fgCompression(IOOperations& io, int blockSizeIn100KB) {
     tbb::flow::graph g;
 
-    tbb::flow::source_node< BufferMsg > file_reader(g, [&io](BufferMsg& bufferMsg)->bool {
+    tbb::flow::input_node< BufferMsg > file_reader(g, [&io](BufferMsg& bufferMsg)->bool {
         if (io.hasDataToRead()) {
             bufferMsg = BufferMsg::createBufferMsg(io.chunksRead(), io.chunkSize());
             io.readChunk(bufferMsg.inputBuffer);
@@ -402,6 +402,7 @@ void fgCompression(IOOperations& io, int blockSizeIn100KB) {
     make_edge(compressor, ordering);
     make_edge(ordering, output_writer);
 
+    file_reader.activate();
     g.wait_for_all();
 }
 

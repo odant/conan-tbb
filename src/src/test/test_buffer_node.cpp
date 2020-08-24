@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2019 Intel Corporation
+    Copyright (c) 2005-2020 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -14,9 +14,8 @@
     limitations under the License.
 */
 
-#if __TBB_CPF_BUILD
-#define TBB_DEPRECATED_FLOW_NODE_EXTRACTION 1
-#endif
+#define TBB_DEPRECATED_FLOW_NODE_EXTRACTION __TBB_CPF_BUILD
+#define TBB_DEPRECATED_FLOW_NODE_ALLOCATOR __TBB_CPF_BUILD
 
 #include "harness.h"
 #include "harness_graph.h"
@@ -430,7 +429,7 @@ int test_serial() {
 void test_follow_and_precedes_api() {
     using msg_t = tbb::flow::continue_msg;
 
-    std::array<msg_t, 3> messages_for_follows = {msg_t(), msg_t(), msg_t()};
+    std::array<msg_t, 3> messages_for_follows = { {msg_t(), msg_t(), msg_t()} };
     std::vector<msg_t> messages_for_precedes = {msg_t(), msg_t(), msg_t()};
 
     follows_and_precedes_testing::test_follows<msg_t, tbb::flow::buffer_node<msg_t>>(messages_for_follows);
@@ -459,6 +458,13 @@ void test_deduction_guides() {
 }
 #endif
 
+#if TBB_DEPRECATED_FLOW_NODE_ALLOCATOR
+void test_node_allocator() {
+    tbb::flow::graph g;
+    tbb::flow::buffer_node< int, std::allocator<int> > tmp(g);
+}
+#endif
+
 int TestMain() {
     tbb::tick_count start = tbb::tick_count::now(), stop;
     for (int p = 2; p <= 4; ++p) {
@@ -470,14 +476,17 @@ int TestMain() {
     REMARK("Buffer_Node Time=%6.6f\n", (stop-start).seconds());
     test_resets<int,tbb::flow::buffer_node<int> >();
     test_resets<float,tbb::flow::buffer_node<float> >();
-#if TBB_DEPRECATED_FLOW_NODE_EXTRACTION
-    test_buffer_extract<tbb::flow::buffer_node<int> >().run_tests();
-#endif
 #if __TBB_PREVIEW_FLOW_GRAPH_NODE_SET
     test_follow_and_precedes_api();
 #endif
 #if __TBB_CPP17_DEDUCTION_GUIDES_PRESENT
     test_deduction_guides();
+#endif
+#if TBB_DEPRECATED_FLOW_NODE_EXTRACTION
+    test_buffer_extract<tbb::flow::buffer_node<int> >().run_tests();
+#endif
+#if TBB_DEPRECATED_FLOW_NODE_ALLOCATOR
+    test_node_allocator();
 #endif
     return Harness::Done;
 }

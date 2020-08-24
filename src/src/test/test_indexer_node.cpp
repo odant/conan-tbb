@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2019 Intel Corporation
+    Copyright (c) 2005-2020 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 #if __TBB_CPF_BUILD
 #define TBB_DEPRECATED_FLOW_NODE_EXTRACTION 1
 #endif
+#define TBB_DEPRECATED_INPUT_NODE_BODY __TBB_CPF_BUILD
 
 #include "harness.h"
 #include "harness_graph.h"
@@ -414,12 +415,26 @@ class source_body {
     int addend;
 public:
     source_body(TT multiplier, int init_val, int addto) : my_mult(multiplier), my_count(init_val), addend(addto) { }
+#if TBB_DEPRECATED_INPUT_NODE_BODY
     bool operator()( TT &v) {
         int lc = my_count;
         v = my_mult * (TT)my_count;
         my_count += addend;
         return lc < Count;
     }
+#else
+    TT operator()( tbb::flow_control& fc) {
+        int lc = my_count;
+        TT ret = my_mult * (TT)my_count;
+        my_count += addend;
+        if ( lc < Count){
+            return ret;
+        }else{
+            fc.stop();
+            return TT();
+        }
+    }
+#endif
 };
 
 // allocator for indexer_node.
@@ -456,7 +471,7 @@ public:
     typedef INT indexer_node_type;
     typedef typename indexer_node_type::output_type TT;
     typedef typename tbb::flow::tuple_element<ELEM-1,typename INT::tuple_types>::type IT;
-    typedef typename tbb::flow::source_node<IT> my_source_node_type;
+    typedef typename tbb::flow::input_node<IT> my_source_node_type;
     static void print_remark() {
         source_node_helper<ELEM-1,INT>::print_remark();
         REMARK(", %s", name_of<IT>::name());
@@ -469,6 +484,7 @@ public:
             ASSERT(new_node->successor_count() == 1, NULL);
 #endif
             all_source_nodes[ELEM-1][i] = (void *)new_node;
+            new_node->activate();
         }
 #if TBB_DEPRECATED_FLOW_NODE_EXTRACTION
         ASSERT(tbb::flow::input_port<ELEM-1>(my_indexer).predecessor_count() == (size_t)nInputs, NULL);
@@ -504,7 +520,7 @@ class source_node_helper<1, INT> {
     typedef INT indexer_node_type;
     typedef typename indexer_node_type::output_type TT;
     typedef typename tbb::flow::tuple_element<0, typename INT::tuple_types>::type IT;
-    typedef typename tbb::flow::source_node<IT> my_source_node_type;
+    typedef typename tbb::flow::input_node<IT> my_source_node_type;
 public:
     static void print_remark() {
         REMARK("Parallel test of indexer_node< %s", name_of<IT>::name());
@@ -514,6 +530,7 @@ public:
             my_source_node_type *new_node = new my_source_node_type(g, source_body<IT>((IT)2, i, nInputs));
             tbb::flow::make_edge(*new_node, tbb::flow::input_port<0>(my_indexer));
             all_source_nodes[0][i] = (void *)new_node;
+            new_node->activate();
         }
     }
     static void check_value(TT &v) {

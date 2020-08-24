@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2018-2019 Intel Corporation
+    Copyright (c) 2018-2020 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 #include "harness_defs.h"
 
 #if __TBB_PREVIEW_FLOW_GRAPH_PRIORITIES
+#define TBB_DEPRECATED_INPUT_NODE_BODY __TBB_CPF_BUILD
 
 #include "harness_graph.h"
 #include "harness_barrier.h"
@@ -233,6 +234,7 @@ struct AsyncActivity {
 
 struct StartBody {
     bool has_run;
+#if TBB_DEPRECATED_INPUT_NODE_BODY
     bool operator()(data_type& input) {
         if (has_run) return false;
         else {
@@ -241,6 +243,16 @@ struct StartBody {
             return true;
         }
     }
+#else
+    data_type operator()(tbb::flow_control& fc) {
+        if (has_run){
+            fc.stop();
+            return data_type();
+        }
+        has_run = true;
+        return 1;
+    }
+#endif
     StartBody() : has_run(false) {}
 };
 
@@ -306,7 +318,7 @@ void test( int num_threads ) {
     AsyncActivity activity(barrier);
     graph g;
 
-    source_node<data_type> starter_node(g, StartBody(), false);
+    input_node<data_type> starter_node(g, StartBody());
     function_node<data_type, data_type> cpu_work_node(
         g, unlimited, CpuWorkBody(barrier, nested_cpu_tasks));
     decider_node_type cpu_restarter_node(g, unlimited, DeciderBody(cpu_subgraph_reruns));

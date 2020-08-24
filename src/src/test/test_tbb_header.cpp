@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2005-2019 Intel Corporation
+    Copyright (c) 2005-2020 Intel Corporation
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -243,6 +243,7 @@ int TestMain ()
     TestFuncDefinitionPresence( flow::remove_edge, (tbb::flow::sender<Msg>&, tbb::flow::receiver<Msg>&), void );
     typedef tbb::flow::tuple<int, int> intpair;
     TestTypeDefinitionPresence( flow::source_node<int> );
+    TestTypeDefinitionPresence( flow::input_node<int> );
     TestTypeDefinitionPresence3(flow::function_node<int, int, tbb::flow::rejecting> );
     TestTypeDefinitionPresence3(flow::multifunction_node<int, intpair, tbb::flow::queueing> );
     TestTypeDefinitionPresence3(flow::async_node<int, int, tbb::flow::queueing_lightweight> );
