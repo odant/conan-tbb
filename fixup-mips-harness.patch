@@ -1,6 +1,6 @@
 --- a/src/src/test/harness.h
 +++ b/src/src/test/harness.h
-@@ -558,7 +558,7 @@ public:
+@@ -560,7 +560,7 @@ public:
          // calls to pthread_create fail with out-of-memory error.
          // Therefore we set the stack size explicitly (as for TBB worker threads).
  #if !defined(HARNESS_THREAD_STACK_SIZE)
