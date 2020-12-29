@@ -938,7 +938,7 @@ static const char* __itt_get_lib_name(void)
     return lib_name;
 }
 
-/* Avoid clashes with std::min, reported by tbb team */
+/* Avoid clashes with std::min */
 #define __itt_min(a,b) ((a) < (b) ? (a) : (b))
 
 static __itt_group_id __itt_get_groups(void)
