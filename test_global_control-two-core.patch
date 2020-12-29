@@ -1,0 +1,21 @@
+diff --git a/src/test/tbb/test_global_control.cpp b/src/test/tbb/test_global_control.cpp
+index 3061a81..a957933 100644
+--- a/src/test/tbb/test_global_control.cpp
++++ b/src/test/tbb/test_global_control.cpp
+@@ -31,6 +31,7 @@
+ #include "tbb/task_arena.h"
+ 
+ #include <cstring>
++#include <algorithm>
+ 
+ struct task_scheduler_handle_guard {
+     tbb::task_scheduler_handle m_handle{};
+@@ -177,7 +178,7 @@ namespace TestBlockingTerminateNS {
+             }
+         };
+         void operator()() {
+-            const int numThreads = 4;
++            const int numThreads = (std::min)(4, tbb::tbb_thread::hardware_concurrency());
+             tbb::global_control init(tbb::global_control::max_allowed_parallelism, numThreads);
+             utils::SpinBarrier barrier( numThreads );
+             tbb::parallel_for( 0, numThreads, Body( barrier ) );

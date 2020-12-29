@@ -1,8 +1,7 @@
 # Intel TBB Conan package
 # Dmitriy Vetutnev, Odant, 2018
 
-
-from conans import ConanFile, tools
+from conans import ConanFile, CMake, tools
 from conans.errors import ConanException
 import os, glob
 
@@ -28,16 +27,14 @@ class TBBConan(ConanFile):
     }
     options = {
         "dll_sign": [False, True],
+        "ninja": [False, True],
+        "shared": [True, False],
         "built_in_tests": [False, True]
     }
-    default_options = "dll_sign=True", "built_in_tests=False"
-    exports_sources = "src/*", \
-                      "Makefile.patch", \
-                      "windows.tbb_output_name.patch", \
-                      "linux.tbb_output_name.patch", \
-                      "fixup-mips-harness.patch", \
-                      "test_parallel_for-two-core.patch", \
-                      "test_task_scheduler_init-two-core.patch", \
+    default_options = "dll_sign=True", "ninja=True", "shared=True", "built_in_tests=False"
+    generators = "cmake"
+    exports_sources = "src/*", "CMakeLists.txt", \
+                      "test_global_control-two-core.patch", \
                       "FindTBB.cmake"
     no_copy_source = True
     build_policy = "missing"
@@ -46,73 +43,33 @@ class TBBConan(ConanFile):
         # Only C++11
         if self.settings.compiler.get_safe("libcxx") == "libstdc++":
             raise ConanException("This package is only compatible with libstdc++11")
+        # MT(d) static library
+        if self.settings.os == "Windows" and self.settings.compiler == "Visual Studio":
+            if self.settings.compiler.runtime == "MT" or self.settings.compiler.runtime == "MTd":
+                self.options.shared=False
         # DLL sign, only Windows
         if self.settings.os != "Windows" or self.options.built_in_tests:
             del self.options.dll_sign
 
     def build_requirements(self):
-        if self.settings.os == "Windows" and self.settings.compiler == "Visual Studio":
-            self.build_requires("gnu_make_installer/[~=4.2.1]@%s/stable" % self.user)
-            toolset = str(self.settings.compiler.get_safe("toolset"))
-            if toolset.endswith("_xp"):
-                self.build_requires("find_sdk_winxp/[~=1.0]@%s/stable" % self.user)
+        if self.options.get_safe("ninja"):
+            self.build_requires("ninja/1.10.1")
         if get_safe(self.options, "dll_sign"):
             self.build_requires("windows_signtool/[~=1.1]@%s/stable" % self.user)
 
     def source(self):
-        tools.patch(patch_file="Makefile.patch")
-        tools.patch(patch_file="windows.tbb_output_name.patch")
-        tools.patch(patch_file="linux.tbb_output_name.patch")
-        tools.patch(patch_file="fixup-mips-harness.patch")
-        tools.patch(patch_file="test_parallel_for-two-core.patch")
-        tools.patch(patch_file="test_task_scheduler_init-two-core.patch")
+        tools.patch(patch_file="test_global_control-two-core.patch")
 
     def build(self):
-        output_name = "tbb"
-        if self.settings.os == "Windows":
-            if self.settings.build_type == "Debug":
-                output_name += "d"
-        #
-        source_folder = os.path.join(self.source_folder, "src")
-        #
-        flags = ["-DTBB_NO_LEGACY=1"]
-        if self.settings.arch == "mips":
-            flags += [
-                "-D__TBB_64BIT_ATOMICS=0"
-            ]
-        build_args = [
-            "CXXFLAGS=\"%s\"" % " ".join(flags),
-            "tbb_output_name=%s" % output_name,
-            "build_type=%s" % str(self.settings.build_type).lower(),
-            "arch=%s" % {
-                        "x86": "ia32",
-                        "x86_64": "intel64",
-                        "mips": "mips",
-                        "armv7": "arm"
-                    }.get(str(self.settings.arch)),
-            "tbb_root=%s" % source_folder,
-            "tbb_build_dir=%s" % self.build_folder
-        ]
-        target = "tbb"
-        #
-        if self.options.built_in_tests:
-            build_args.insert(0, "NO_LEGACY_TESTS=1")
-            target = "test"
-        #
-        build_env = self.get_build_environment()
-        with tools.environment_append(build_env):
-            self.output.info("Current directory: %s" % os.getcwd())
-            self.run("make -f %s %s %s -j%s" % (os.path.join(source_folder, "Makefile"), " ".join(build_args), target, tools.cpu_count()))
-
-    def get_build_environment(self):
-        env = {}
-        if self.settings.os == "Windows" and self.settings.compiler == "Visual Studio":
-            env = tools.vcvars_dict(self.settings, filter_known_paths=False)
-            toolset = str(self.settings.compiler.get_safe("toolset"))
-            if toolset.endswith("_xp"):
-                import find_sdk_winxp
-                env = find_sdk_winxp.dict_append(self.settings.arch, env=env)
-        return env
+        build_type = "RelWithDebInfo" if self.settings.build_type == "Release" else "Debug"
+        generator = "Ninja" if self.options.ninja == True else None
+        cmake = CMake(self, build_type=build_type, generator=generator)
+        cmake.verbose = False
+        if not self.options.built_in_tests:
+            cmake.definitions["TBB_TEST:BOOL"] = "OFF"
+        cmake.configure()
+        cmake.build()
+        cmake.install()
 
     def package(self):
         # Don`t pack if testing
@@ -152,3 +109,4 @@ class TBBConan(ConanFile):
         # Disable auto link
         if self.settings.os == "Windows":
             self.cpp_info.defines.append("__TBB_NO_IMPLICIT_LINKAGE=1")
+            self.cpp_info.defines.append("__TBBMALLOC_NO_IMPLICIT_LINKAGE=1")
