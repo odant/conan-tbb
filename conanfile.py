@@ -105,11 +105,17 @@ class TBBConan(ConanFile):
     def package(self):
         self.copy("FindTBB.cmake", src=".", dst=".")
         self.copy("*.h", src="src/include", dst="include", keep_path=True)
-        self.copy("*.lib", dst="lib", keep_path=False)
-        self.copy("*.dll", dst="bin", keep_path=False)
+        
+        self.copy("*/tbb.lib", dst="lib", keep_path=False)
+        self.copy("*/tbbd.lib", dst="lib", keep_path=False)
+        self.copy("*/tbb.dll", dst="bin", keep_path=False)
+        self.copy("*/tbbd.dll", dst="bin", keep_path=False)
+        self.copy("*/tbb.pdb", dst="bin", keep_path=False)
+        self.copy("*/tbbd.pdb", dst="bin", keep_path=False)
+        
         self.copy("*/libtbb.so.*", dst="lib", keep_path=False, symlinks=True)
         self.copy("*.a", dst="lib", keep_path=False)
-        self.copy("*tbb*.pdb", dst="bin", keep_path=False)
+       
         # Symlink
         if self.settings.os == "Linux":
             lib_folder = os.path.join(self.package_folder, "lib")
