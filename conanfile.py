@@ -72,6 +72,10 @@ class TBBConan(ConanFile):
             flags += [
                 "-D__TBB_64BIT_ATOMICS=0"
             ]
+        if self.settings.compiler == "Visual Studio":
+            flags += [
+                "/FS"
+            ]
         build_args = [
             "CXXFLAGS=\"%s\"" % " ".join(flags),
             "tbb_output_name=%s" % output_name,
