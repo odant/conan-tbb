@@ -42,7 +42,7 @@ class TBBConan(ConanFile):
             del self.options.dll_sign
 
     def build_requirements(self):
-        if self.settings.os == "Windows" and self.settings.compiler == "Visual Studio":
+        if self.settings.os == "Windows":
             self.build_requires("gnu_make_installer/[~=4.2.1]@%s/stable" % self.user)
         if self.options.get_safe("dll_sign"):
             self.build_requires("windows_signtool/[~=1.1]@%s/stable" % self.user)
