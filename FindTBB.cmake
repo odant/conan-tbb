@@ -1,9 +1,9 @@
 # Intel TBB Conan package
-# Dmitriy Vetutnev, Odant, 2018
+# Dmitriy Vetutnev, Odant, 2018, 2020
 
 
 find_path(TBB_INCLUDE_DIR
-    NAMES tbb/tbb.h
+    NAMES tbb/tbb_stddef.h
     PATHS ${CONAN_INCLUDE_DIRS_TBB}
     NO_DEFAULT_PATH
 )
@@ -16,8 +16,22 @@ find_library(TBB_LIBRARY
 
 if(TBB_INCLUDE_DIR)
 
-    set(TBB_VERSION_MAJOR 2020)
-    set(TBB_VERSION_MINOR 3)
+    file(STRINGS ${TBB_INCLUDE_DIR}/tbb/tbb_stddef.h define_major
+         REGEX "^#define[\t ]+TBB_VERSION_MAJOR[\t ]+[0-9]+"
+    )
+    string(REGEX REPLACE "^#define[\t ]+TBB_VERSION_MAJOR[\t ]+([0-9]+)"
+           "\\1" TBB_VERSION_MAJOR ${define_major}
+    )
+    unset(define_major)
+
+    file(STRINGS ${TBB_INCLUDE_DIR}/tbb/tbb_stddef.h define_minor
+         REGEX "^#define[\t ]+TBB_VERSION_MINOR[\t ]+[0-9]+"
+    )
+    string(REGEX REPLACE "^#define[\t ]+TBB_VERSION_MINOR[\t ]+([0-9]+)"
+           "\\1" TBB_VERSION_MINOR ${define_minor}
+    )
+    unset(define_minor)
+
     set(TBB_VERSION_STRING "${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR}")
     set(TBB_VERSION_COUNT 2)
 
@@ -30,9 +44,9 @@ find_package_handle_standard_args(TBB
 )
 
 if(TBB_FOUND AND NOT TARGET TBB::tbb)
-    
+
     add_library(TBB::tbb UNKNOWN IMPORTED)
-    
+
     set_target_properties(TBB::tbb PROPERTIES
         IMPORTED_LOCATION "${TBB_LIBRARY}"
         INTERFACE_INCLUDE_DIRECTORIES "${TBB_INCLUDE_DIR}"
