@@ -6,36 +6,83 @@ environment:
   CONAN_PRINT_RUN_COMMANDS: 1
   CONAN_LOG_RUN_TO_OUTPUT: 1
 
-  CONAN_DISABLE_DLL_SIGN: 1
-
   CONAN_REFERENCE: tbb/2020.3+0
   CONAN_USERNAME: odant
   CONAN_CHANNEL: testing
   CONAN_STABLE_CHANNEL: stable
 
-  CONAN_VISUAL_RUNTIMES: MDd, MD
-  
   CONAN_UPLOAD: https://conan.kysa.me
   CONAN_LOGIN_USERNAME: appveyor
   CONAN_STABLE_BRANCH_PATTERN: release/*
 
+  CONAN_SHARED_OPTION_NAME: False
+  CONAN_PURE_C: False
+
+  CONAN_OPTIONS: dll_sign=False
+
   matrix:
+
+# Visual Studio 15 2017
+
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       CONAN_VISUAL_VERSIONS: 15
+      CONAN_VISUAL_RUNTIMES: MD
+      CONAN_BUILD_TYPES: Release
       CONAN_ARCHS: x86_64
 
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       CONAN_VISUAL_VERSIONS: 15
+      CONAN_VISUAL_RUNTIMES: MDd
+      CONAN_BUILD_TYPES: Debug
+      CONAN_ARCHS: x86_64
+
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      CONAN_VISUAL_VERSIONS: 15
+      CONAN_VISUAL_RUNTIMES: MD
+      CONAN_BUILD_TYPES: Release
+      CONAN_ARCHS: x86
+
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      CONAN_VISUAL_VERSIONS: 15
+      CONAN_VISUAL_RUNTIMES: MDd
+      CONAN_BUILD_TYPES: Debug
+      CONAN_ARCHS: x86
+
+# Visual Studio 16 2019
+
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      CONAN_VISUAL_VERSIONS: 16
+      CONAN_VISUAL_RUNTIMES: MD
+      CONAN_BUILD_TYPES: Release
+      CONAN_ARCHS: x86_64
+
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      CONAN_VISUAL_VERSIONS: 16
+      CONAN_VISUAL_RUNTIMES: MDd
+      CONAN_BUILD_TYPES: Debug
+      CONAN_ARCHS: x86_64
+
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      CONAN_VISUAL_VERSIONS: 16
+      CONAN_VISUAL_RUNTIMES: MD
+      CONAN_BUILD_TYPES: Release
+      CONAN_ARCHS: x86
+
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      CONAN_VISUAL_VERSIONS: 16
+      CONAN_VISUAL_RUNTIMES: MDd
+      CONAN_BUILD_TYPES: Debug
       CONAN_ARCHS: x86
 
 install:
   - set PATH=%PYTHON%;%PYTHON%\\Scripts\\;%PATH%
   - pip install conan
   - pip install conan_package_tools
-  - conan user
-  
+
+  - conan --version
+
 build: false
-  
+
 test_script:
   - python build.py
 
