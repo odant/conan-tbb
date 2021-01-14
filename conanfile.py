@@ -1,36 +1,31 @@
 # Intel TBB Conan package
-# Dmitriy Vetutnev, Odant, 2018
+# Dmitriy Vetutnev, Odant, 2018, 2021
 
 
 from conans import ConanFile, tools
-from conans.errors import ConanException
 import os, glob
-
-
-def get_safe(options, name):
-    try:
-        return getattr(options, name, None)
-    except ConanException:
-        return None
 
 
 class TBBConan(ConanFile):
     name = "tbb"
-    version = "2020.3+0"
+    version = "2020.3+1"
     license = "Apache License 2.0 - https://www.threadingbuildingblocks.org/faq/10"
     description = "Intel(R) Threading Building Blocks (Intel(R) TBB) lets you easily write parallel C++ programs that take full advantage of multicore performance, that are portable, composable and have future-proof scalability."
     url = "https://github.com/odant/conan-tbb"
     settings = {
         "os": ["Windows", "Linux"],
-        "compiler": ["Visual Studio", "gcc"],
+        "compiler": ["Visual Studio", "gcc", "clang"],
         "build_type": ["Debug", "Release"],
         "arch": ["x86_64", "x86", "mips", "armv7"]
     }
     options = {
         "dll_sign": [False, True],
-        "built_in_tests": [False, True]
+        "with_unit_tests": [False, True]
     }
-    default_options = "dll_sign=True", "built_in_tests=False"
+    default_options = {
+        "dll_sign": True,
+        "with_unit_tests": False
+    }
     exports_sources = "src/*", \
                       "Makefile.patch", \
                       "windows.tbb_output_name.patch", \
@@ -47,16 +42,13 @@ class TBBConan(ConanFile):
         if self.settings.compiler.get_safe("libcxx") == "libstdc++":
             raise ConanException("This package is only compatible with libstdc++11")
         # DLL sign, only Windows
-        if self.settings.os != "Windows" or self.options.built_in_tests:
+        if self.settings.os != "Windows" or self.options.with_unit_tests:
             del self.options.dll_sign
 
     def build_requirements(self):
         if self.settings.os == "Windows" and self.settings.compiler == "Visual Studio":
             self.build_requires("gnu_make_installer/[~=4.2.1]@%s/stable" % self.user)
-            toolset = str(self.settings.compiler.get_safe("toolset"))
-            if toolset.endswith("_xp"):
-                self.build_requires("find_sdk_winxp/[~=1.0]@%s/stable" % self.user)
-        if get_safe(self.options, "dll_sign"):
+        if self.options.get_safe("dll_sign"):
             self.build_requires("windows_signtool/[~=1.1]@%s/stable" % self.user)
 
     def source(self):
@@ -95,7 +87,7 @@ class TBBConan(ConanFile):
         ]
         target = "tbb"
         #
-        if self.options.built_in_tests:
+        if self.options.with_unit_tests:
             build_args.insert(0, "NO_LEGACY_TESTS=1")
             target = "test"
         #
@@ -108,21 +100,14 @@ class TBBConan(ConanFile):
         env = {}
         if self.settings.os == "Windows" and self.settings.compiler == "Visual Studio":
             env = tools.vcvars_dict(self.settings, filter_known_paths=False)
-            toolset = str(self.settings.compiler.get_safe("toolset"))
-            if toolset.endswith("_xp"):
-                import find_sdk_winxp
-                env = find_sdk_winxp.dict_append(self.settings.arch, env=env)
         return env
 
     def package(self):
-        # Don`t pack if testing
-        if self.options.built_in_tests:
-            return
         self.copy("FindTBB.cmake", src=".", dst=".")
         self.copy("*.h", src="src/include", dst="include", keep_path=True)
         self.copy("*.lib", dst="lib", keep_path=False)
         self.copy("*.dll", dst="bin", keep_path=False)
-        self.copy("*.so.*", dst="lib", keep_path=False, symlinks=True)
+        self.copy("*/libtbb.so.*", dst="lib", keep_path=False, symlinks=True)
         self.copy("*.a", dst="lib", keep_path=False)
         self.copy("*tbb*.pdb", dst="bin", keep_path=False)
         # Symlink
@@ -136,7 +121,7 @@ class TBBConan(ConanFile):
                     symlink = fname[0:fname.rfind(extension) + len(extension)]
                     self.run("ln -s \"%s\" \"%s\"" % (fname, symlink))
         # Sign DLL
-        if get_safe(self.options, "dll_sign"):
+        if self.options.get_safe("dll_sign"):
             import windows_signtool
             pattern = os.path.join(self.package_folder, "bin", "*.dll")
             for fpath in glob.glob(pattern):
