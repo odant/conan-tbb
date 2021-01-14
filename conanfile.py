@@ -38,11 +38,7 @@ class TBBConan(ConanFile):
     build_policy = "missing"
     
     def configure(self):
-        # Only C++11
-        if self.settings.compiler.get_safe("libcxx") == "libstdc++":
-            raise ConanException("This package is only compatible with libstdc++11")
-        # DLL sign, only Windows
-        if self.settings.os != "Windows" or self.options.with_unit_tests:
+        if self.settings.os != "Windows":
             del self.options.dll_sign
 
     def build_requirements(self):
