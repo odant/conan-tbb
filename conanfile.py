@@ -28,10 +28,9 @@ class TBBConan(ConanFile):
     options = {
         "dll_sign": [False, True],
         "ninja": [False, True],
-        "shared": [True, False],
-        "built_in_tests": [False, True]
+        "shared": [True, False]
     }
-    default_options = "dll_sign=True", "ninja=True", "shared=True", "built_in_tests=False"
+    default_options = "dll_sign=True", "ninja=True", "shared=True"
     generators = "cmake"
     exports_sources = "src/*", "CMakeLists.txt", \
                       "test_global_control-two-core.patch", \
@@ -48,14 +47,14 @@ class TBBConan(ConanFile):
             if self.settings.compiler.runtime == "MT" or self.settings.compiler.runtime == "MTd":
                 self.options.shared=False
         # DLL sign, only Windows
-        if self.settings.os != "Windows" or self.options.built_in_tests:
+        if self.settings.os != "Windows":
             del self.options.dll_sign
 
     def build_requirements(self):
         if self.options.get_safe("ninja"):
-            self.build_requires("ninja/1.10.1")
+            self.build_requires("ninja/[>=1.10.1]")
         if get_safe(self.options, "dll_sign"):
-            self.build_requires("windows_signtool/[~=1.1]@%s/stable" % self.user)
+            self.build_requires("windows_signtool/[>=1.1]@%s/stable" % self.user)
 
     def source(self):
         tools.patch(patch_file="test_global_control-two-core.patch")
@@ -65,33 +64,24 @@ class TBBConan(ConanFile):
         generator = "Ninja" if self.options.ninja == True else None
         cmake = CMake(self, build_type=build_type, generator=generator)
         cmake.verbose = False
-        if not self.options.built_in_tests:
-            cmake.definitions["TBB_TEST:BOOL"] = "OFF"
+        cmake.definitions["TBB_TEST:BOOL"] = "OFF"
         cmake.configure()
         cmake.build()
-        cmake.install()
 
     def package(self):
-        # Don`t pack if testing
-        if self.options.built_in_tests:
-            return
         self.copy("FindTBB.cmake", src=".", dst=".")
         self.copy("*.h", src="src/include", dst="include", keep_path=True)
-        self.copy("*.lib", dst="lib", keep_path=False)
-        self.copy("*.dll", dst="bin", keep_path=False)
-        self.copy("*.so.*", dst="lib", keep_path=False, symlinks=True)
-        self.copy("*.a", dst="lib", keep_path=False)
-        self.copy("*tbb*.pdb", dst="bin", keep_path=False)
-        # Symlink
-        if self.settings.os == "Linux":
-            lib_folder = os.path.join(self.package_folder, "lib")
-            if not os.path.isdir(lib_folder):
-                return
-            with tools.chdir(lib_folder):
-                for fname in os.listdir("."):
-                    extension = ".so"
-                    symlink = fname[0:fname.rfind(extension) + len(extension)]
-                    self.run("ln -s \"%s\" \"%s\"" % (fname, symlink))
+        
+        self.copy("lib/tbb12.lib", dst="lib", keep_path=False)
+        self.copy("lib/tbb12_debug.lib", dst="lib", keep_path=False)
+        self.copy("bin/tbb12.dll", dst="bin", keep_path=False)
+        self.copy("bin/tbb12_debug.dll", dst="bin", keep_path=False)
+        self.copy("*/tbb12.pdb", dst="bin", keep_path=False)
+        self.copy("*/tbb12_debug.pdb", dst="bin", keep_path=False)
+        
+        self.copy("*/libtbb.so*", dst="lib", keep_path=False, symlinks=True)
+        self.copy("*/libtbb_debug.so*", dst="lib", keep_path=False, symlinks=True)
+
         # Sign DLL
         if get_safe(self.options, "dll_sign"):
             import windows_signtool
