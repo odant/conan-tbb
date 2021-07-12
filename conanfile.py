@@ -15,7 +15,7 @@ def get_safe(options, name):
 
 class TBBConan(ConanFile):
     name = "tbb"
-    version = "2021.2.0+2"
+    version = "2021.3.0+0"
     license = "Apache License 2.0 - https://www.threadingbuildingblocks.org/faq/10"
     description = "Intel(R) Threading Building Blocks (Intel(R) TBB) lets you easily write parallel C++ programs that take full advantage of multicore performance, that are portable, composable and have future-proof scalability."
     url = "https://github.com/odant/conan-tbb"
@@ -34,6 +34,7 @@ class TBBConan(ConanFile):
     generators = "cmake"
     exports_sources = "src/*", "CMakeLists.txt", \
                       "test_global_control-two-core.patch", \
+                      "cmake_path.patch", \
                       "FindTBB.cmake"
     no_copy_source = True
     build_policy = "missing"
@@ -58,6 +59,7 @@ class TBBConan(ConanFile):
 
     def source(self):
         tools.patch(patch_file="test_global_control-two-core.patch")
+        tools.patch(patch_file="cmake_path.patch")
 
     def build(self):
         build_type = "RelWithDebInfo" if self.settings.build_type == "Release" else "Debug"
