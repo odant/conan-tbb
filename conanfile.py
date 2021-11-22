@@ -34,7 +34,6 @@ class TBBConan(ConanFile):
     generators = "cmake"
     exports_sources = "src/*", "CMakeLists.txt", \
                       "test_global_control-two-core.patch", \
-                      "cmake_path.patch", \
                       "FindTBB.cmake"
     no_copy_source = True
     build_policy = "missing"
@@ -59,7 +58,6 @@ class TBBConan(ConanFile):
 
     def source(self):
         tools.patch(patch_file="test_global_control-two-core.patch")
-        tools.patch(patch_file="cmake_path.patch")
 
     def build(self):
         build_type = "RelWithDebInfo" if self.settings.build_type == "Release" else "Debug"
