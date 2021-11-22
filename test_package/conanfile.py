@@ -10,8 +10,6 @@ class PackageTestConan(ConanFile):
     generators = "cmake"
 
     def build(self):
-        if self.options["tbb"].built_in_tests:
-            return
         cmake = CMake(self)
         cmake.verbose = True
         cmake.configure()
@@ -23,8 +21,6 @@ class PackageTestConan(ConanFile):
         self.copy("*.so.*", dst="bin", src="lib")
 
     def test(self):
-        if self.options["tbb"].built_in_tests:
-            return
         if self.settings.os == "Windows" and self.settings.compiler == "Visual Studio":
             self.run("ctest --verbose --build-config %s" % self.settings.build_type)
         else:
