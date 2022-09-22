@@ -1,6 +1,6 @@
 --- a/src/test/tbb/test_global_control.cpp
 +++ b/src/test/tbb/test_global_control.cpp
-@@ -31,6 +31,7 @@
+@@ -29,6 +29,7 @@
  #include "tbb/task_arena.h"
  
  #include <cstring>
@@ -8,7 +8,7 @@
  
  struct task_scheduler_handle_guard {
      tbb::task_scheduler_handle m_handle{};
-@@ -177,7 +178,7 @@ namespace TestBlockingTerminateNS {
+@@ -170,7 +171,7 @@ namespace TestBlockingTerminateNS {
              }
          };
          void operator()() {
