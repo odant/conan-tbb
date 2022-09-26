@@ -34,6 +34,7 @@ class TBBConan(ConanFile):
     generators = "cmake"
     exports_sources = "src/*", "CMakeLists.txt", \
                       "test_global_control-two-core.patch", \
+                      "dynamic_winapi.patch", \
                       "FindTBB.cmake"
     no_copy_source = True
     build_policy = "missing"
@@ -58,6 +59,8 @@ class TBBConan(ConanFile):
 
     def source(self):
         tools.patch(patch_file="test_global_control-two-core.patch")
+        if self.settings.os == "Windows":
+            tools.patch(patch_file="dynamic_winapi.patch")
 
     def build(self):
         build_type = "RelWithDebInfo" if self.settings.build_type == "Release" else "Debug"

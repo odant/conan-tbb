@@ -1,0 +1,39 @@
+diff --git a/src/src/tbb/global_control.cpp b/src/src/tbb/global_control.cpp
+index 4c8ea27..521b5a9 100644
+--- a/src/src/tbb/global_control.cpp
++++ b/src/src/tbb/global_control.cpp
+@@ -89,16 +89,31 @@ public:
+ 
+ class alignas(max_nfs_size) stack_size_control : public control_storage {
+     std::size_t default_value() const override {
+-#if _WIN32_WINNT >= 0x0602 /* _WIN32_WINNT_WIN8 */
++#ifdef _WIN32            
+         static auto ThreadStackSizeDefault = [] {
++            HMODULE kernel32_module = ::LoadLibraryW(L"kernel32.dll");
++            if (kernel32_module == NULL)
++                return ThreadStackSize;
++
++            typedef void (WINAPI *tGetCurrentThreadStackLimits)
++                         (PULONG_PTR LowLimit,
++                          PULONG_PTR HighLimit);            
++            tGetCurrentThreadStackLimits pGetCurrentThreadStackLimits;
++            pGetCurrentThreadStackLimits = (tGetCurrentThreadStackLimits) ::GetProcAddress(kernel32_module, "GetCurrentThreadStackLimits");
++            if (pGetCurrentThreadStackLimits == NULL)
++                return ThreadStackSize;
++            
+             ULONG_PTR hi, lo;
+-            GetCurrentThreadStackLimits(&lo, &hi);
++            pGetCurrentThreadStackLimits(&lo, &hi);
++            
++            ::FreeLibrary(kernel32_module);
++            
+             return hi - lo;
+         }();
+         return ThreadStackSizeDefault;
+ #else
+         return ThreadStackSize;
+-#endif
++#endif    
+     }
+     void apply_active(std::size_t new_active) override {
+         control_storage::apply_active(new_active);
