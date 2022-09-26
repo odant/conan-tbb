@@ -27,7 +27,8 @@ index 4c8ea27..521b5a9 100644
 +            
 +            ::FreeLibrary(kernel32_module);
 +            
-             return hi - lo;
+-            return hi - lo;
++            return static_cast<std::size_t>(hi - lo);
          }();
          return ThreadStackSizeDefault;
  #else
