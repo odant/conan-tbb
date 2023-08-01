@@ -68,6 +68,8 @@ class TBBConan(ConanFile):
         cmake = CMake(self, build_type=build_type, generator=generator)
         cmake.verbose = False
         cmake.definitions["TBB_TEST:BOOL"] = "OFF"
+        if self.settings.os == "Windows" and self.settings.arch == "x86":
+            cmake.definitions["TBB_STRICT:BOOL"] = "OFF"
         cmake.configure()
         cmake.build()
 
