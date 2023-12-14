@@ -1,6 +1,6 @@
 --- a/src/src/tbb/global_control.cpp
 +++ b/src/src/tbb/global_control.cpp
-@@ -89,16 +89,30 @@ public:
+@@ -95,16 +95,30 @@ public:
  
  class alignas(max_nfs_size) stack_size_control : public control_storage {
      std::size_t default_value() const override {
