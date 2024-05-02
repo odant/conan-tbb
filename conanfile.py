@@ -35,6 +35,7 @@ class TBBConan(ConanFile):
     exports_sources = "src/*", "CMakeLists.txt", \
                       "test_global_control-two-core.patch", \
                       "dynamic_winapi.patch", \
+                      "add_atomic_wait.patch", \
                       "FindTBB.cmake"
     no_copy_source = True
     build_policy = "missing"
@@ -59,6 +60,7 @@ class TBBConan(ConanFile):
 
     def source(self):
         tools.patch(patch_file="test_global_control-two-core.patch")
+        tools.patch(patch_file="add_atomic_wait.patch")
         if self.settings.os == "Windows":
             tools.patch(patch_file="dynamic_winapi.patch")
 

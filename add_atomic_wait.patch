@@ -1,0 +1,143 @@
+diff --git a/src/include/oneapi/tbb/spin_mutex.h b/src/include/oneapi/tbb/spin_mutex.h
+index e38c47c..70e9658 100644
+--- a/src/include/oneapi/tbb/spin_mutex.h
++++ b/src/include/oneapi/tbb/spin_mutex.h
+@@ -36,6 +36,14 @@ namespace d1 {
+ class rtm_mutex;
+ #endif
+ 
++#ifndef _TBB_USE_ATOMIC_WAIT
++#    if (__cplusplus >= 202002L) && !defined(TBB_DISABLE_USE_ATOMIC_WAIT)
++#        define _TBB_USE_ATOMIC_WAIT 1
++#    else
++#        define _TBB_USE_ATOMIC_WAIT 0
++#    endif
++#endif
++
+ /** A spin_mutex is a low-level synchronization primitive.
+     While locked, it causes the waiting threads to spin in a loop until the lock is released.
+     It should be used only for locking short critical sections
+@@ -66,10 +74,18 @@ public:
+     //! Acquire lock
+     /** Spin if the lock is taken */
+     void lock() {
++#if _TBB_USE_ATOMIC_WAIT
++        call_itt_notify(prepare, this);
++        while (m_flag.exchange(true)) {
++            m_flag.wait(true, std::memory_order_relaxed);
++        }
++        call_itt_notify(acquired, this);
++#else
+         atomic_backoff backoff;
+         call_itt_notify(prepare, this);
+         while (m_flag.exchange(true)) backoff.pause();
+         call_itt_notify(acquired, this);
++#endif    
+     }
+ 
+     //! Try acquiring lock (non-blocking)
+@@ -86,6 +102,9 @@ public:
+     void unlock() {
+         call_itt_notify(releasing, this);
+         m_flag.store(false, std::memory_order_release);
++#if _TBB_USE_ATOMIC_WAIT
++        m_flag.notify_one();
++#endif        
+     }
+ 
+ protected:
+diff --git a/src/include/oneapi/tbb/spin_rw_mutex.h b/src/include/oneapi/tbb/spin_rw_mutex.h
+index 3fdae35..2a03a3f 100644
+--- a/src/include/oneapi/tbb/spin_rw_mutex.h
++++ b/src/include/oneapi/tbb/spin_rw_mutex.h
+@@ -36,6 +36,14 @@ namespace d1 {
+ class rtm_rw_mutex;
+ #endif
+ 
++#ifndef _TBB_USE_ATOMIC_WAIT
++#    if (__cplusplus >= 202002L) && !defined(TBB_DISABLE_USE_ATOMIC_WAIT)
++#        define _TBB_USE_ATOMIC_WAIT 1
++#    else
++#        define _TBB_USE_ATOMIC_WAIT 0
++#    endif
++#endif
++
+ //! Fast, unfair, spinning reader-writer lock with backoff and writer-preference
+ /** @ingroup synchronization */
+ class spin_rw_mutex {
+@@ -64,12 +72,18 @@ public:
+     //! Acquire lock
+     void lock() {
+         call_itt_notify(prepare, this);
++#if _TBB_USE_ATOMIC_WAIT
++        for (state_type s = m_state.load(std::memory_order_relaxed);; m_state.wait(s, std::memory_order_relaxed)) {
++#else
+         for (atomic_backoff backoff; ; backoff.pause()) {
+             state_type s = m_state.load(std::memory_order_relaxed);
++#endif    
+             if (!(s & BUSY)) { // no readers, no writers
+                 if (m_state.compare_exchange_strong(s, WRITER))
+                     break; // successfully stored writer flag
++#if !_TBB_USE_ATOMIC_WAIT
+                 backoff.reset(); // we could be very close to complete op.
++#endif                
+             } else if (!(s & WRITER_PENDING)) { // no pending writers
+                 m_state |= WRITER_PENDING;
+             }
+@@ -95,13 +109,20 @@ public:
+     void unlock() {
+         call_itt_notify(releasing, this);
+         m_state &= READERS;
++#if _TBB_USE_ATOMIC_WAIT
++        m_state.notify_all();
++#endif                
+     }
+ 
+     //! Lock shared ownership mutex
+     void lock_shared() {
+         call_itt_notify(prepare, this);
++#if _TBB_USE_ATOMIC_WAIT
++        for (state_type s = m_state.load(std::memory_order_relaxed);; m_state.wait(s, std::memory_order_relaxed)) {
++#else
+         for (atomic_backoff b; ; b.pause()) {
+             state_type s = m_state.load(std::memory_order_relaxed);
++#endif            
+             if (!(s & (WRITER | WRITER_PENDING))) { // no writer or write requests
+                 state_type prev_state = m_state.fetch_add(ONE_READER);
+                 if (!(prev_state & WRITER)) {
+@@ -136,6 +157,9 @@ public:
+         __TBB_ASSERT(m_state & READERS, "invalid state of a read lock: no readers");
+         call_itt_notify(releasing, this);
+         m_state -= ONE_READER;
++#if _TBB_USE_ATOMIC_WAIT
++        m_state.notify_all();
++#endif                
+     }
+ 
+ protected:
+@@ -152,8 +176,15 @@ protected:
+         // (with multiple readers and pending writer, another upgrade could have been requested)
+         while ((s & READERS) == ONE_READER || !(s & WRITER_PENDING)) {
+             if (m_state.compare_exchange_strong(s, s | WRITER | WRITER_PENDING)) {
++#if _TBB_USE_ATOMIC_WAIT
++                s = m_state.load(std::memory_order_relaxed);
++                while ((s & READERS) != ONE_READER) {
++                    m_state.wait(s, std::memory_order_relaxed);
++                }
++#else
+                 atomic_backoff backoff;
+                 while ((m_state.load(std::memory_order_relaxed) & READERS) != ONE_READER) backoff.pause();
++#endif                
+                 __TBB_ASSERT((m_state & (WRITER_PENDING|WRITER)) == (WRITER_PENDING | WRITER), "invalid state when upgrading to writer");
+                 // Both new readers and writers are blocked at this time
+                 m_state -= (ONE_READER + WRITER_PENDING);
+@@ -171,6 +202,9 @@ protected:
+         call_itt_notify(releasing, this);
+         m_state += (ONE_READER - WRITER);
+         __TBB_ASSERT(m_state & READERS, "invalid state after downgrade: no readers");
++#if _TBB_USE_ATOMIC_WAIT
++        m_state.notify_all();
++#endif                
+     }
+ 
+     using state_type = std::intptr_t;
