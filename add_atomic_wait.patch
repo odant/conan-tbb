@@ -47,7 +47,7 @@ index e38c47c..70e9658 100644
  
  protected:
 diff --git a/src/include/oneapi/tbb/spin_rw_mutex.h b/src/include/oneapi/tbb/spin_rw_mutex.h
-index 3fdae35..2a03a3f 100644
+index 3fdae35..45f2a6f 100644
 --- a/src/include/oneapi/tbb/spin_rw_mutex.h
 +++ b/src/include/oneapi/tbb/spin_rw_mutex.h
 @@ -36,6 +36,14 @@ namespace d1 {
@@ -65,12 +65,13 @@ index 3fdae35..2a03a3f 100644
  //! Fast, unfair, spinning reader-writer lock with backoff and writer-preference
  /** @ingroup synchronization */
  class spin_rw_mutex {
-@@ -64,12 +72,18 @@ public:
+@@ -64,12 +72,19 @@ public:
      //! Acquire lock
      void lock() {
          call_itt_notify(prepare, this);
 +#if _TBB_USE_ATOMIC_WAIT
-+        for (state_type s = m_state.load(std::memory_order_relaxed);; m_state.wait(s, std::memory_order_relaxed)) {
++        for (state_type s;; m_state.wait(s, std::memory_order_relaxed)) {
++            s = m_state.load(std::memory_order_relaxed);
 +#else
          for (atomic_backoff backoff; ; backoff.pause()) {
              state_type s = m_state.load(std::memory_order_relaxed);
@@ -84,7 +85,7 @@ index 3fdae35..2a03a3f 100644
              } else if (!(s & WRITER_PENDING)) { // no pending writers
                  m_state |= WRITER_PENDING;
              }
-@@ -95,13 +109,20 @@ public:
+@@ -95,13 +110,21 @@ public:
      void unlock() {
          call_itt_notify(releasing, this);
          m_state &= READERS;
@@ -97,7 +98,8 @@ index 3fdae35..2a03a3f 100644
      void lock_shared() {
          call_itt_notify(prepare, this);
 +#if _TBB_USE_ATOMIC_WAIT
-+        for (state_type s = m_state.load(std::memory_order_relaxed);; m_state.wait(s, std::memory_order_relaxed)) {
++        for (state_type s;; m_state.wait(s, std::memory_order_relaxed)) {
++            s = m_state.load(std::memory_order_relaxed);
 +#else
          for (atomic_backoff b; ; b.pause()) {
              state_type s = m_state.load(std::memory_order_relaxed);
@@ -105,7 +107,7 @@ index 3fdae35..2a03a3f 100644
              if (!(s & (WRITER | WRITER_PENDING))) { // no writer or write requests
                  state_type prev_state = m_state.fetch_add(ONE_READER);
                  if (!(prev_state & WRITER)) {
-@@ -136,6 +157,9 @@ public:
+@@ -136,6 +159,9 @@ public:
          __TBB_ASSERT(m_state & READERS, "invalid state of a read lock: no readers");
          call_itt_notify(releasing, this);
          m_state -= ONE_READER;
@@ -115,13 +117,12 @@ index 3fdae35..2a03a3f 100644
      }
  
  protected:
-@@ -152,8 +176,15 @@ protected:
+@@ -152,8 +178,14 @@ protected:
          // (with multiple readers and pending writer, another upgrade could have been requested)
          while ((s & READERS) == ONE_READER || !(s & WRITER_PENDING)) {
              if (m_state.compare_exchange_strong(s, s | WRITER | WRITER_PENDING)) {
 +#if _TBB_USE_ATOMIC_WAIT
-+                s = m_state.load(std::memory_order_relaxed);
-+                while ((s & READERS) != ONE_READER) {
++                while (((s = m_state.load(std::memory_order_relaxed)) & READERS) != ONE_READER) {
 +                    m_state.wait(s, std::memory_order_relaxed);
 +                }
 +#else
@@ -131,7 +132,7 @@ index 3fdae35..2a03a3f 100644
                  __TBB_ASSERT((m_state & (WRITER_PENDING|WRITER)) == (WRITER_PENDING | WRITER), "invalid state when upgrading to writer");
                  // Both new readers and writers are blocked at this time
                  m_state -= (ONE_READER + WRITER_PENDING);
-@@ -171,6 +202,9 @@ protected:
+@@ -171,6 +203,9 @@ protected:
          call_itt_notify(releasing, this);
          m_state += (ONE_READER - WRITER);
          __TBB_ASSERT(m_state & READERS, "invalid state after downgrade: no readers");
