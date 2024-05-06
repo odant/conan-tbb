@@ -28,9 +28,10 @@ class TBBConan(ConanFile):
     options = {
         "dll_sign": [False, True],
         "ninja": [False, True],
-        "shared": [True, False]
+        "shared": [True, False],
+        "atomic_wait": [True, False]
     }
-    default_options = "dll_sign=True", "ninja=True", "shared=True"
+    default_options = "dll_sign=True", "ninja=True", "shared=True", "atomic_wait=False"
     generators = "cmake"
     exports_sources = "src/*", "CMakeLists.txt", \
                       "test_global_control-two-core.patch", \
@@ -60,7 +61,8 @@ class TBBConan(ConanFile):
 
     def source(self):
         tools.patch(patch_file="test_global_control-two-core.patch")
-        tools.patch(patch_file="add_atomic_wait.patch")
+        if self.options.get_safe("atomic_wait"):
+            tools.patch(patch_file="add_atomic_wait.patch")
         if self.settings.os == "Windows":
             tools.patch(patch_file="dynamic_winapi.patch")
 
