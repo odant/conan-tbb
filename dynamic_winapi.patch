@@ -28,9 +28,10 @@
 +            return static_cast<std::size_t>(hi - lo);
          }();
          return ThreadStackSizeDefault;
+ #elif defined(EMSCRIPTEN)
+         return __TBB_EMSCRIPTEN_STACK_SIZE;
  #else
          return ThreadStackSize;
  #endif
      }
-     void apply_active(std::size_t new_active) override {
-         control_storage::apply_active(new_active);
+
