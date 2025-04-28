@@ -1,5 +1,5 @@
---- a/src/src/tbb/global_control.cpp
-+++ b/src/src/tbb/global_control.cpp
+--- a/src/tbb/global_control.cpp
++++ b/src/tbb/global_control.cpp
 @@ -97,16 +97,30 @@ public:
  
  class alignas(max_nfs_size) stack_size_control : public control_storage {
